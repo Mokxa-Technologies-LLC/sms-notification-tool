@@ -1,0 +1,573 @@
+[
+    {
+        "title": "Provider Configuration",
+        "properties": [
+            {
+                "name": "provider",
+                "label": "Provider / API Type",
+                "type": "selectbox",
+                "value": "custom",
+                "options": [
+                    { "value": "custom", "label": "Custom / Generic REST API" },
+                    { "value": "twilio", "label": "Twilio SMS / WhatsApp" },
+                    { "value": "nexmo", "label": "Vonage / Nexmo SMS" },
+                    { "value": "infobip", "label": "Infobip SMS" },
+                    { "value": "plivo", "label": "Plivo SMS" },
+                    { "value": "brevo", "label": "Brevo Transactional SMS" },
+                    { "value": "msg91", "label": "Msg91 SMS" }
+                ]
+            }
+        ]
+    },
+    {
+        "title": "Twilio Template Settings",
+        "control_field": "provider",
+        "control_value": "twilio",
+        "properties": [
+            {
+                "name": "twilioEndpoint",
+                "label": "Function / Action",
+                "type": "selectbox",
+                "value": "https://api.twilio.com/2010-04-01/Accounts/{accountSid}/Messages.json",
+                "control_field": "provider",
+                "control_value": "twilio",
+                "options": [
+                    { "value": "https://api.twilio.com/2010-04-01/Accounts/{accountSid}/Messages.json", "label": "Send SMS / WhatsApp" },
+                    { "value": "custom", "label": "Custom Endpoint URL" }
+                ]
+            },
+            {
+                "name": "twilioCustomEndpoint",
+                "label": "Custom Endpoint URL",
+                "type": "textfield",
+                "control_field": "twilioEndpoint",
+                "control_value": "custom",
+                "description": "Enter custom URL if using a specific Twilio API endpoint. Accepts Hash Variables."
+            },
+            {
+                "name": "twilioAccountSid",
+                "label": "Twilio Account SID",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "twilio",
+                "description": "e.g., ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "twilioAuthToken",
+                "label": "Twilio Auth Token",
+                "type": "password",
+                "control_field": "provider",
+                "control_value": "twilio",
+                "description": "Twilio Auth Token or Basic Auth header. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "twilioTo",
+                "label": "To (Recipient Phone Number)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "twilio",
+                "description": "e.g., +919876543210 or #form.recipient_phone#."
+            },
+            {
+                "name": "twilioFrom",
+                "label": "From (Sender Phone Number / Messaging SID)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "twilio",
+                "description": "e.g., +16895885674 or #form.sender_phone#."
+            },
+            {
+                "name": "twilioBody",
+                "label": "Message Body",
+                "type": "textarea",
+                "rows": "5",
+                "control_field": "provider",
+                "control_value": "twilio",
+                "description": "SMS / WhatsApp content. Hash variables supported."
+            }
+        ]
+    },
+    {
+        "title": "Vonage / Nexmo Template Settings",
+        "control_field": "provider",
+        "control_value": "nexmo",
+        "properties": [
+            {
+                "name": "nexmoEndpoint",
+                "label": "Function / Action",
+                "type": "selectbox",
+                "value": "https://rest.nexmo.com/sms/json",
+                "control_field": "provider",
+                "control_value": "nexmo",
+                "options": [
+                    { "value": "https://rest.nexmo.com/sms/json", "label": "Send SMS" },
+                    { "value": "custom", "label": "Custom Endpoint URL" }
+                ]
+            },
+            {
+                "name": "nexmoCustomEndpoint",
+                "label": "Custom Endpoint URL",
+                "type": "textfield",
+                "control_field": "nexmoEndpoint",
+                "control_value": "custom",
+                "description": "Enter custom URL if using a specific Nexmo API endpoint. Accepts Hash Variables."
+            },
+            {
+                "name": "nexmoApiKey",
+                "label": "Nexmo API Key",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "nexmo",
+                "description": "Nexmo / Vonage API Key. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "nexmoApiSecret",
+                "label": "Nexmo API Secret",
+                "type": "password",
+                "control_field": "provider",
+                "control_value": "nexmo",
+                "description": "Nexmo / Vonage API Secret. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "nexmoTo",
+                "label": "To (Recipient Phone Number)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "nexmo",
+                "description": "Recipient phone number. Leading '+' will be stripped automatically."
+            },
+            {
+                "name": "nexmoFrom",
+                "label": "From (Sender ID / Phone Number)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "nexmo",
+                "description": "Sender ID or phone number."
+            },
+            {
+                "name": "nexmoText",
+                "label": "Message Text",
+                "type": "textarea",
+                "rows": "5",
+                "control_field": "provider",
+                "control_value": "nexmo",
+                "description": "SMS text content. Hash variables supported."
+            }
+        ]
+    },
+    {
+        "title": "Infobip Template Settings",
+        "control_field": "provider",
+        "control_value": "infobip",
+        "properties": [
+            {
+                "name": "infobipEndpoint",
+                "label": "Function / Action",
+                "type": "selectbox",
+                "value": "https://api.infobip.com/sms/2/text/single",
+                "control_field": "provider",
+                "control_value": "infobip",
+                "options": [
+                    { "value": "https://api.infobip.com/sms/2/text/single", "label": "Send Single SMS" },
+                    { "value": "custom", "label": "Custom Endpoint URL" }
+                ]
+            },
+            {
+                "name": "infobipCustomEndpoint",
+                "label": "Custom Endpoint URL",
+                "type": "textfield",
+                "control_field": "infobipEndpoint",
+                "control_value": "custom",
+                "description": "Enter custom URL. Accepts Hash Variables."
+            },
+            {
+                "name": "infobipApiKey",
+                "label": "Infobip API Key",
+                "type": "password",
+                "control_field": "provider",
+                "control_value": "infobip",
+                "description": "Infobip API Key. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "infobipBaseUrl",
+                "label": "Base URL / Host",
+                "type": "textfield",
+                "value": "api.infobip.com",
+                "control_field": "provider",
+                "control_value": "infobip",
+                "description": "Your Infobip Base URL (e.g. xxxxx.api.infobip.com). Defaults to api.infobip.com."
+            },
+            {
+                "name": "infobipTo",
+                "label": "To (Recipient Phone Number)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "infobip",
+                "description": "Recipient phone number with country code."
+            },
+            {
+                "name": "infobipFrom",
+                "label": "From (Sender ID)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "infobip",
+                "description": "Approved Sender ID or phone number."
+            },
+            {
+                "name": "infobipText",
+                "label": "Message Text",
+                "type": "textarea",
+                "rows": "5",
+                "control_field": "provider",
+                "control_value": "infobip",
+                "description": "SMS content. Hash variables supported."
+            }
+        ]
+    },
+    {
+        "title": "Plivo Template Settings",
+        "control_field": "provider",
+        "control_value": "plivo",
+        "properties": [
+            {
+                "name": "plivoEndpoint",
+                "label": "Function / Action",
+                "type": "selectbox",
+                "value": "https://api.plivo.com/v1/Account/{authId}/Message/",
+                "control_field": "provider",
+                "control_value": "plivo",
+                "options": [
+                    { "value": "https://api.plivo.com/v1/Account/{authId}/Message/", "label": "Send SMS" },
+                    { "value": "custom", "label": "Custom Endpoint URL" }
+                ]
+            },
+            {
+                "name": "plivoCustomEndpoint",
+                "label": "Custom Endpoint URL",
+                "type": "textfield",
+                "control_field": "plivoEndpoint",
+                "control_value": "custom",
+                "description": "Enter custom URL. Accepts Hash Variables."
+            },
+            {
+                "name": "plivoAuthId",
+                "label": "Plivo Auth ID",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "plivo",
+                "description": "Plivo Auth ID. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "plivoAuthToken",
+                "label": "Plivo Auth Token",
+                "type": "password",
+                "control_field": "provider",
+                "control_value": "plivo",
+                "description": "Plivo Auth Token. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "plivoTo",
+                "label": "To (Recipient Phone Number)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "plivo",
+                "description": "Recipient phone number with country code."
+            },
+            {
+                "name": "plivoFrom",
+                "label": "From (Sender Phone Number)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "plivo",
+                "description": "Sender phone number or ID."
+            },
+            {
+                "name": "plivoText",
+                "label": "Message Text",
+                "type": "textarea",
+                "rows": "5",
+                "control_field": "provider",
+                "control_value": "plivo",
+                "description": "SMS content. Hash variables supported."
+            }
+        ]
+    },
+    {
+        "title": "Brevo Template Settings",
+        "control_field": "provider",
+        "control_value": "brevo",
+        "properties": [
+            {
+                "name": "brevoEndpoint",
+                "label": "Function / Action",
+                "type": "selectbox",
+                "value": "https://api.brevo.com/v3/transactionalSMS/sms",
+                "control_field": "provider",
+                "control_value": "brevo",
+                "options": [
+                    { "value": "https://api.brevo.com/v3/transactionalSMS/sms", "label": "Send Transactional SMS" },
+                    { "value": "custom", "label": "Custom Endpoint URL" }
+                ]
+            },
+            {
+                "name": "brevoCustomEndpoint",
+                "label": "Custom Endpoint URL",
+                "type": "textfield",
+                "control_field": "brevoEndpoint",
+                "control_value": "custom",
+                "description": "Enter custom URL. Accepts Hash Variables."
+            },
+            {
+                "name": "brevoApiKey",
+                "label": "Brevo API Key (api-key)",
+                "type": "password",
+                "control_field": "provider",
+                "control_value": "brevo",
+                "description": "Brevo v3 API Key. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "brevoSender",
+                "label": "Sender Name / ID",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "brevo",
+                "description": "Max 11 alphanumeric characters or sender number."
+            },
+            {
+                "name": "brevoRecipient",
+                "label": "Recipient Phone Number",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "brevo",
+                "description": "Recipient phone number in E.164 format (e.g. +33600000000)."
+            },
+            {
+                "name": "brevoContent",
+                "label": "Message Content",
+                "type": "textarea",
+                "rows": "5",
+                "control_field": "provider",
+                "control_value": "brevo",
+                "description": "Transactional SMS content. Hash variables supported."
+            }
+        ]
+    },
+    {
+        "title": "Msg91 Template Settings",
+        "control_field": "provider",
+        "control_value": "msg91",
+        "properties": [
+            {
+                "name": "msg91Endpoint",
+                "label": "Function / Action",
+                "type": "selectbox",
+                "value": "https://control.msg91.com/api/v5/flow/",
+                "control_field": "provider",
+                "control_value": "msg91",
+                "options": [
+                    { "value": "https://control.msg91.com/api/v5/flow/", "label": "Send Flow / Template SMS" },
+                    { "value": "custom", "label": "Custom Endpoint URL" }
+                ]
+            },
+            {
+                "name": "msg91CustomEndpoint",
+                "label": "Custom Endpoint URL",
+                "type": "textfield",
+                "control_field": "msg91Endpoint",
+                "control_value": "custom",
+                "description": "Enter custom URL. Accepts Hash Variables."
+            },
+            {
+                "name": "msg91AuthKey",
+                "label": "Msg91 Authentication Key (authkey)",
+                "type": "password",
+                "control_field": "provider",
+                "control_value": "msg91",
+                "description": "Msg91 authkey. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+            },
+            {
+                "name": "msg91FlowId",
+                "label": "Flow ID / Template ID",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "msg91",
+                "description": "Msg91 Flow ID (e.g., 6100xxxxxxxx)."
+            },
+            {
+                "name": "msg91Sender",
+                "label": "Sender ID (Header)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "msg91",
+                "description": "Approved 6-character Header / Sender ID."
+            },
+            {
+                "name": "msg91To",
+                "label": "To (Recipient Phone Number)",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "msg91",
+                "description": "Recipient phone number with country code."
+            },
+            {
+                "name": "msg91Body",
+                "label": "Message Text / Variables",
+                "type": "textarea",
+                "rows": "5",
+                "control_field": "provider",
+                "control_value": "msg91",
+                "description": "SMS content or variable payload."
+            }
+        ]
+    },
+    {
+        "title": "Custom API Configuration",
+        "control_field": "provider",
+        "control_value": "custom",
+        "properties": [
+            {
+                "name": "apiEndpoint",
+                "label": "API Endpoint URL",
+                "type": "textfield",
+                "control_field": "provider",
+                "control_value": "custom",
+                "description": "e.g., https://api.example.com/v1/messages. Accepts Hash Variables."
+            },
+            {
+                "name": "httpMethod",
+                "label": "HTTP Method",
+                "type": "selectbox",
+                "value": "POST",
+                "control_field": "provider",
+                "control_value": "custom",
+                "options": [
+                    { "value": "POST", "label": "POST" },
+                    { "value": "GET", "label": "GET" },
+                    { "value": "PUT", "label": "PUT" },
+                    { "value": "DELETE", "label": "DELETE" }
+                ]
+            },
+            {
+                "name": "contentType",
+                "label": "Content-Type Header",
+                "type": "selectbox",
+                "value": "application/x-www-form-urlencoded",
+                "control_field": "provider",
+                "control_value": "custom",
+                "options": [
+                    { "value": "application/x-www-form-urlencoded", "label": "Form URL-Encoded" },
+                    { "value": "application/json", "label": "JSON (application/json)" },
+                    { "value": "text/plain", "label": "Text (text/plain)" }
+                ]
+            },
+            {
+                "name": "authHeaderName",
+                "label": "Authorization Header Name",
+                "type": "textfield",
+                "value": "Authorization",
+                "control_field": "provider",
+                "control_value": "custom"
+            },
+            {
+                "name": "authHeaderValue",
+                "label": "Authorization Header Value",
+                "type": "password",
+                "control_field": "provider",
+                "control_value": "custom",
+                "description": "e.g., 'Basic {base_64_string}' or 'Bearer {token}'. Accepts Hash Variables."
+            },
+            {
+                "name": "payloadTemplate",
+                "label": "Payload Template",
+                "type": "textarea",
+                "rows": "8",
+                "control_field": "provider",
+                "control_value": "custom",
+                "description": "Build your payload using Joget Hash Variables."
+            }
+        ]
+    },
+    {
+        "title": "Additional HTTP Headers",
+        "properties": [
+            {
+                "name": "headersGrid",
+                "label": "Custom HTTP Headers",
+                "type": "grid",
+                "columns": [
+                    { "key": "headerName", "label": "Header Name" },
+                    { "key": "headerValue", "label": "Header Value" }
+                ],
+                "description": "Add optional extra HTTP headers for ANY provider (e.g. X-Custom-Header, User-Agent). Accepts Hash Variables."
+            },
+            {
+                "name": "customHeaders",
+                "label": "Custom Additional Headers (Text)",
+                "type": "textarea",
+                "rows": "3",
+                "description": "Optional extra headers, one per line (e.g. Header-Name: Header-Value). Hash Variables supported."
+            }
+        ]
+    },
+    {
+        "title": "Advanced Execution & Workflow Response Mapping",
+        "properties": [
+            {
+                "name": "asyncExecution",
+                "label": "Execution Mode",
+                "type": "selectbox",
+                "value": "false",
+                "options": [
+                    { "value": "false", "label": "Synchronous (Wait for response in workflow thread)" },
+                    { "value": "true", "label": "Asynchronous Background Execution (Non-blocking)" }
+                ],
+                "description": "Asynchronous mode executes API requests in a background thread to prevent UI timeouts on slow external services."
+            },
+            {
+                "name": "failOnError",
+                "label": "Workflow Error Handling",
+                "type": "selectbox",
+                "value": "false",
+                "options": [
+                    { "value": "false", "label": "No - Log error and continue workflow execution" },
+                    { "value": "true", "label": "Yes - Throw exception on HTTP error status (4xx / 5xx)" }
+                ],
+                "description": "Throwing an exception triggers Joget workflow process error handling routes."
+            },
+            {
+                "name": "enableDataMasking",
+                "label": "Sensitive Data Redaction",
+                "type": "selectbox",
+                "value": "true",
+                "options": [
+                    { "value": "true", "label": "Enabled - Mask API keys, tokens, and passwords in logs" },
+                    { "value": "false", "label": "Disabled - Store unmasked payloads and responses" }
+                ],
+                "description": "Automatically redacts passwords, secret keys, auth tokens, and credentials in audit database records and system logs."
+            },
+            {
+                "name": "responseVarCode",
+                "label": "Store Response Status Code to Workflow Variable",
+                "type": "textfield",
+                "description": "Optional workflow variable name to store the HTTP status code (e.g., statusCode or apiStatus)."
+            },
+            {
+                "name": "responseVarOutput",
+                "label": "Store Response Payload to Workflow Variable",
+                "type": "textfield",
+                "description": "Optional workflow variable name to store the raw API response text (e.g., responseBody or apiOutput)."
+            }
+        ]
+    },
+    {
+        "title": "Save Data (Audit Log)",
+        "properties": [
+            {
+                "name": "tableName",
+                "label": "Table Name",
+                "type": "textfield",
+                "description": "Leave blank to skip saving audit log. Prefix 'app_fd_' is added automatically. Will save Method, Endpoint, Payload, Response, and Status Code."
+            }
+        ]
+    }
+]
