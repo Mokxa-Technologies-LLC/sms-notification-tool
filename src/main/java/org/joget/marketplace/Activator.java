@@ -12,9 +12,11 @@ public class Activator implements BundleActivator {
 
     @Override
     public void start(BundleContext context) {
-        // FIXED: Registering the service under its exact class name
+        // Registering both Process Tool and Form Element services in OSGi context
         registrationList
                 .add(context.registerService(smsNotificationTool.class.getName(), new smsNotificationTool(), null));
+        registrationList
+                .add(context.registerService(smsNotificationFormElement.class.getName(), new smsNotificationFormElement(), null));
     }
 
     @Override

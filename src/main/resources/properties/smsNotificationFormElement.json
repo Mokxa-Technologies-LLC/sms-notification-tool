@@ -1,5 +1,46 @@
 [
     {
+        "title": "UI Configuration",
+        "properties": [
+            {
+                "name": "id",
+                "label": "Element ID",
+                "type": "textfield",
+                "required": "true"
+            },
+            {
+                "name": "label",
+                "label": "Label",
+                "type": "textfield"
+            },
+            {
+                "name": "buttonLabel",
+                "label": "Button Label",
+                "type": "textfield",
+                "value": "Send SMS",
+                "required": "true"
+            },
+            {
+                "name": "buttonClass",
+                "label": "Button CSS Class",
+                "type": "textfield",
+                "value": "form-button btn btn-primary"
+            },
+            {
+                "name": "successMessage",
+                "label": "Success Message",
+                "type": "textfield",
+                "value": "SMS sent successfully!"
+            },
+            {
+                "name": "errorMessage",
+                "label": "Error Message",
+                "type": "textfield",
+                "value": "Failed to send SMS."
+            }
+        ]
+    },
+    {
         "title": "Provider Configuration",
         "properties": [
             {
@@ -531,56 +572,6 @@
                 "type": "textarea",
                 "rows": "3",
                 "description": "Optional extra headers, one per line (e.g. Header-Name: Header-Value). Hash Variables supported."
-            }
-        ]
-    },
-    {
-        "title": "Advanced Execution & Workflow Response Mapping",
-        "properties": [
-            {
-                "name": "asyncExecution",
-                "label": "Execution Mode",
-                "type": "selectbox",
-                "value": "false",
-                "options": [
-                    { "value": "false", "label": "Synchronous (Wait for response in workflow thread)" },
-                    { "value": "true", "label": "Asynchronous Background Execution (Non-blocking)" }
-                ],
-                "description": "Asynchronous mode executes API requests in a background thread to prevent UI timeouts on slow external services."
-            },
-            {
-                "name": "failOnError",
-                "label": "Workflow Error Handling",
-                "type": "selectbox",
-                "value": "false",
-                "options": [
-                    { "value": "false", "label": "No - Log error and continue workflow execution" },
-                    { "value": "true", "label": "Yes - Throw exception on HTTP error status (4xx / 5xx)" }
-                ],
-                "description": "Throwing an exception triggers Joget workflow process error handling routes."
-            },
-            {
-                "name": "enableDataMasking",
-                "label": "Sensitive Data Redaction",
-                "type": "selectbox",
-                "value": "true",
-                "options": [
-                    { "value": "true", "label": "Enabled - Mask API keys, tokens, and passwords in logs" },
-                    { "value": "false", "label": "Disabled - Store unmasked payloads and responses" }
-                ],
-                "description": "Automatically redacts passwords, secret keys, auth tokens, and credentials in audit database records and system logs."
-            },
-            {
-                "name": "responseVarCode",
-                "label": "Store Response Status Code to Workflow Variable",
-                "type": "textfield",
-                "description": "Optional workflow variable name to store the HTTP status code (e.g., statusCode or apiStatus)."
-            },
-            {
-                "name": "responseVarOutput",
-                "label": "Store Response Payload to Workflow Variable",
-                "type": "textfield",
-                "description": "Optional workflow variable name to store the raw API response text (e.g., responseBody or apiOutput)."
             }
         ]
     },

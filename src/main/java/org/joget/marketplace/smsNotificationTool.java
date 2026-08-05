@@ -7,6 +7,7 @@ import org.joget.commons.util.LogUtil;
 import org.joget.commons.util.SecurityUtil;
 import org.joget.commons.util.UuidGenerator;
 import org.joget.plugin.base.DefaultApplicationPlugin;
+import org.joget.plugin.property.model.PropertyEditable;
 import org.joget.workflow.model.WorkflowAssignment;
 import org.joget.workflow.model.service.WorkflowManager;
 
@@ -33,7 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
-public class smsNotificationTool extends DefaultApplicationPlugin {
+public class smsNotificationTool extends DefaultApplicationPlugin implements PropertyEditable {
 
     // Cache table schema checks to optimize DB execution per table name
     private static final Map<String, Boolean> VERIFIED_TABLES = new ConcurrentHashMap<>();
@@ -56,7 +57,7 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
 
     @Override
     public String getVersion() {
-        return "1.2";
+        return "1.4";
     }
 
     @Override
@@ -100,6 +101,45 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             }
         }
         return "";
+    }
+
+    private String getToProp(Map properties, String providerKey, WorkflowAssignment wfAssignment) {
+        String val = getPropString(properties, providerKey);
+        if (val.isEmpty()) {
+            val = getPropString(properties, "to");
+        }
+        if (val.isEmpty()) {
+            val = getPropString(properties, "recipient");
+        }
+        return AppUtil.processHashVariable(val, wfAssignment, null, null);
+    }
+
+    private String getFromProp(Map properties, String providerKey, WorkflowAssignment wfAssignment) {
+        String val = getPropString(properties, providerKey);
+        if (val.isEmpty()) {
+            val = getPropString(properties, "from");
+        }
+        if (val.isEmpty()) {
+            val = getPropString(properties, "sender");
+        }
+        return AppUtil.processHashVariable(val, wfAssignment, null, null);
+    }
+
+    private String getMessageProp(Map properties, String providerKey, WorkflowAssignment wfAssignment) {
+        String val = getPropString(properties, providerKey);
+        if (val.isEmpty()) {
+            val = getPropString(properties, "message");
+        }
+        if (val.isEmpty()) {
+            val = getPropString(properties, "body");
+        }
+        if (val.isEmpty()) {
+            val = getPropString(properties, "text");
+        }
+        if (val.isEmpty()) {
+            val = getPropString(properties, "content");
+        }
+        return AppUtil.processHashVariable(val, wfAssignment, null, null);
     }
 
     // Sensitive data masking utility
@@ -186,12 +226,9 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             if (!payloadTemplate.isEmpty()) {
                 spec.payload = payloadTemplate;
             } else {
-                String to = AppUtil.processHashVariable(getPropString(properties, "twilioTo"), wfAssignment, null,
-                        null);
-                String from = AppUtil.processHashVariable(getPropString(properties, "twilioFrom"), wfAssignment, null,
-                        null);
-                String body = AppUtil.processHashVariable(getPropString(properties, "twilioBody"), wfAssignment, null,
-                        null);
+                String to = getToProp(properties, "twilioTo", wfAssignment);
+                String from = getFromProp(properties, "twilioFrom", wfAssignment);
+                String body = getMessageProp(properties, "twilioBody", wfAssignment);
 
                 try {
                     StringBuilder sb = new StringBuilder();
@@ -256,11 +293,9 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             if (!payloadTemplate.isEmpty()) {
                 spec.payload = payloadTemplate;
             } else {
-                String to = AppUtil.processHashVariable(getPropString(properties, "nexmoTo"), wfAssignment, null, null);
-                String from = AppUtil.processHashVariable(getPropString(properties, "nexmoFrom"), wfAssignment, null,
-                        null);
-                String text = AppUtil.processHashVariable(getPropString(properties, "nexmoText"), wfAssignment, null,
-                        null);
+                String to = getToProp(properties, "nexmoTo", wfAssignment);
+                String from = getFromProp(properties, "nexmoFrom", wfAssignment);
+                String text = getMessageProp(properties, "nexmoText", wfAssignment);
 
                 if (to.startsWith("+"))
                     to = to.substring(1);
@@ -334,12 +369,9 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             if (!payloadTemplate.isEmpty()) {
                 spec.payload = payloadTemplate;
             } else {
-                String to = AppUtil.processHashVariable(getPropString(properties, "infobipTo"), wfAssignment, null,
-                        null);
-                String from = AppUtil.processHashVariable(getPropString(properties, "infobipFrom"), wfAssignment, null,
-                        null);
-                String text = AppUtil.processHashVariable(getPropString(properties, "infobipText"), wfAssignment, null,
-                        null);
+                String to = getToProp(properties, "infobipTo", wfAssignment);
+                String from = getFromProp(properties, "infobipFrom", wfAssignment);
+                String text = getMessageProp(properties, "infobipText", wfAssignment);
 
                 StringBuilder json = new StringBuilder();
                 json.append("{");
@@ -404,11 +436,9 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             if (!payloadTemplate.isEmpty()) {
                 spec.payload = payloadTemplate;
             } else {
-                String to = AppUtil.processHashVariable(getPropString(properties, "plivoTo"), wfAssignment, null, null);
-                String from = AppUtil.processHashVariable(getPropString(properties, "plivoFrom"), wfAssignment, null,
-                        null);
-                String text = AppUtil.processHashVariable(getPropString(properties, "plivoText"), wfAssignment, null,
-                        null);
+                String to = getToProp(properties, "plivoTo", wfAssignment);
+                String from = getFromProp(properties, "plivoFrom", wfAssignment);
+                String text = getMessageProp(properties, "plivoText", wfAssignment);
 
                 StringBuilder json = new StringBuilder();
                 json.append("{");
@@ -469,12 +499,9 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             if (!payloadTemplate.isEmpty()) {
                 spec.payload = payloadTemplate;
             } else {
-                String sender = AppUtil.processHashVariable(getPropString(properties, "brevoSender"), wfAssignment,
-                        null, null);
-                String recipient = AppUtil.processHashVariable(getPropString(properties, "brevoRecipient"),
-                        wfAssignment, null, null);
-                String content = AppUtil.processHashVariable(getPropString(properties, "brevoContent"), wfAssignment,
-                        null, null);
+                String sender = getFromProp(properties, "brevoSender", wfAssignment);
+                String recipient = getToProp(properties, "brevoRecipient", wfAssignment);
+                String content = getMessageProp(properties, "brevoContent", wfAssignment);
 
                 StringBuilder json = new StringBuilder();
                 json.append("{");
@@ -537,9 +564,8 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             } else {
                 String flowId = AppUtil.processHashVariable(getPropString(properties, "msg91FlowId"), wfAssignment,
                         null, null);
-                String sender = AppUtil.processHashVariable(getPropString(properties, "msg91Sender"), wfAssignment,
-                        null, null);
-                String to = AppUtil.processHashVariable(getPropString(properties, "msg91To"), wfAssignment, null, null);
+                String sender = getFromProp(properties, "msg91Sender", wfAssignment);
+                String to = getToProp(properties, "msg91To", wfAssignment);
 
                 StringBuilder json = new StringBuilder();
                 json.append("{");
@@ -576,7 +602,43 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
                 spec.authHeaderValue = SecurityUtil.decrypt(spec.authHeaderValue);
             }
 
-            spec.payload = getPropString(properties, "payloadTemplate");
+            String payloadTemplate = getPropString(properties, "payloadTemplate");
+            if (!payloadTemplate.isEmpty()) {
+                spec.payload = payloadTemplate;
+            } else {
+                String to = getToProp(properties, "to", wfAssignment);
+                String from = getFromProp(properties, "from", wfAssignment);
+                String msg = getMessageProp(properties, "message", wfAssignment);
+
+                if (spec.contentType.toLowerCase().contains("json")) {
+                    StringBuilder json = new StringBuilder();
+                    json.append("{");
+                    json.append("\"to\":\"").append(escapeJson(to)).append("\",");
+                    json.append("\"from\":\"").append(escapeJson(from)).append("\",");
+                    json.append("\"message\":\"").append(escapeJson(msg)).append("\"");
+                    json.append("}");
+                    spec.payload = json.toString();
+                } else {
+                    try {
+                        StringBuilder sb = new StringBuilder();
+                        if (!to.isEmpty())
+                            sb.append("to=").append(URLEncoder.encode(to, "UTF-8"));
+                        if (!from.isEmpty()) {
+                            if (sb.length() > 0)
+                                sb.append("&");
+                            sb.append("from=").append(URLEncoder.encode(from, "UTF-8"));
+                        }
+                        if (!msg.isEmpty()) {
+                            if (sb.length() > 0)
+                                sb.append("&");
+                            sb.append("message=").append(URLEncoder.encode(msg, "UTF-8"));
+                        }
+                        spec.payload = sb.toString();
+                    } catch (Exception e) {
+                        LogUtil.error(getClassName(), e, "Error encoding Custom payload");
+                    }
+                }
+            }
 
             // Parse grid custom headers (Table UI)
             Object headersGridObj = properties.get("headersGrid");
@@ -743,14 +805,15 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
         if ("true".equalsIgnoreCase(asyncExecution)) {
             LogUtil.info(getClassName(), "Launching API Execution asynchronously in background thread.");
             final Map finalMergedProps = mergedProperties;
-            EXECUTOR_SERVICE.submit(() -> performApiCallAndAuditLog(finalMergedProps, wfAssignment));
+            final AppDefinition finalAppDef = appDef;
+            EXECUTOR_SERVICE.submit(() -> performApiCallAndAuditLog(finalMergedProps, wfAssignment, finalAppDef));
             return null;
         } else {
-            return performApiCallAndAuditLog(mergedProperties, wfAssignment);
+            return performApiCallAndAuditLog(mergedProperties, wfAssignment, appDef);
         }
     }
 
-    private Object performApiCallAndAuditLog(Map mergedProperties, WorkflowAssignment wfAssignment) {
+    public Map<String, Object> performApiCallAndAuditLog(Map mergedProperties, WorkflowAssignment wfAssignment, AppDefinition appDef) {
         String provider = getPropString(mergedProperties, "provider");
         if (provider.isEmpty())
             provider = "custom";
@@ -880,22 +943,32 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
 
         // 5. Database Audit Logging with Sensitive Data Redaction
         String tableName = getPropString(mergedProperties, "tableName");
-        if (tableName != null && !tableName.trim().isEmpty()) {
-            String fullTableName = tableName.trim().toLowerCase();
-            if (!fullTableName.startsWith("app_fd_")) {
-                fullTableName = "app_fd_" + fullTableName;
-            }
-            saveAuditLog(fullTableName, spec.httpMethod, spec.endpoint, spec.payload, apiResponseOutput, responseCode,
-                    enableDataMasking);
+        String appId = (appDef != null && appDef.getId() != null) ? appDef.getId() : "";
+        String rawTableName = buildSafeTableName(appId, tableName);
+        String fullTableName = "app_fd_" + rawTableName;
+        
+        String statusSummary = (responseCode >= 200 && responseCode < 300)
+                ? "PASSED (HTTP " + responseCode + ")"
+                : "FAILED (HTTP " + responseCode + (apiResponseOutput.isEmpty() ? "" : " - " + apiResponseOutput) + ")";
+        
+        saveAuditLog(fullTableName, spec.httpMethod, spec.endpoint, spec.payload, statusSummary, responseCode,
+                enableDataMasking);
+                
+        String autoCreateVal = getPropString(mergedProperties, "autoCreateList");
+        if (autoCreateVal.isEmpty() || "true".equalsIgnoreCase(autoCreateVal)) {
+            autoCreateDataList(appDef, rawTableName);
         }
 
         // 6. Workflow Error Handling (Fail on HTTP Error status)
         boolean failOnError = "true".equalsIgnoreCase(getPropString(mergedProperties, "failOnError"));
         if (failOnError && responseCode >= 400) {
-            throw new RuntimeException("API Call Failed with HTTP status (" + responseCode + "): " + apiResponseOutput);
+            throw new RuntimeException("API Call Failed with HTTP status (" + responseCode + "): " + statusSummary);
         }
 
-        return null;
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", responseCode);
+        result.put("response", statusSummary);
+        return result;
     }
 
     private String escapeJson(String input) {
@@ -908,6 +981,57 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    private String buildSafeTableName(String appId, String tableName) {
+        if (tableName == null || tableName.trim().isEmpty()) {
+            tableName = "api_logs";
+        }
+        String cleanTable = tableName.trim().toLowerCase();
+        if (cleanTable.startsWith("app_fd_")) {
+            cleanTable = cleanTable.substring(7);
+        }
+
+        if (appId == null) {
+            appId = "";
+        } else {
+            appId = appId.trim().toLowerCase();
+        }
+
+        String customPart = cleanTable;
+        if (!appId.isEmpty() && customPart.startsWith(appId + "_")) {
+            customPart = customPart.substring(appId.length() + 1);
+        }
+
+        if (appId.isEmpty()) {
+            if (customPart.length() > 20) {
+                customPart = customPart.substring(0, 20);
+            }
+            return customPart;
+        }
+
+        if (customPart.isEmpty()) {
+            customPart = "api_logs";
+        }
+
+        String combined = appId + "_" + customPart;
+        if (combined.length() <= 20) {
+            return combined;
+        }
+
+        int maxCustomLen = Math.min(customPart.length(), 9);
+        String truncatedCustom = customPart.substring(0, maxCustomLen);
+
+        int maxAppIdLen = 20 - 1 - truncatedCustom.length();
+        if (maxAppIdLen < 1)
+            maxAppIdLen = 1;
+        String truncatedAppId = appId.length() > maxAppIdLen ? appId.substring(0, maxAppIdLen) : appId;
+
+        String finalTableName = truncatedAppId + "_" + truncatedCustom;
+        if (finalTableName.length() > 20) {
+            finalTableName = finalTableName.substring(0, 20);
+        }
+        return finalTableName;
     }
 
     // High performance audit logger with cached schema validation and sensitive
@@ -1006,6 +1130,48 @@ public class smsNotificationTool extends DefaultApplicationPlugin {
             }
         } catch (Exception e) {
             LogUtil.error(getClassName(), e, "Error checking audit table schema for " + fullTableName);
+        }
+    }
+
+    private void autoCreateDataList(AppDefinition appDef, String rawTableName) {
+        if (appDef == null) return;
+        try {
+            org.springframework.context.ApplicationContext ac = AppUtil.getApplicationContext();
+            
+            // 1. Create Form Definition (required for FormRowDataListBinder)
+            org.joget.apps.app.dao.FormDefinitionDao formDao = (org.joget.apps.app.dao.FormDefinitionDao) ac.getBean("formDefinitionDao");
+            String formId = rawTableName;
+            org.joget.apps.app.model.FormDefinition formDef = formDao.loadById(formId, appDef);
+            if (formDef == null) {
+                formDef = new org.joget.apps.app.model.FormDefinition();
+                formDef.setId(formId);
+                formDef.setName("API Logs - " + rawTableName);
+                formDef.setTableName(rawTableName);
+                formDef.setAppDefinition(appDef);
+                
+                String formJson = "{\"className\":\"org.joget.apps.form.model.Form\",\"properties\":{\"id\":\"" + formId + "\",\"name\":\"API Logs - " + rawTableName + "\",\"tableName\":\"" + rawTableName + "\"},\"elements\":[{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"dateCreated\",\"label\":\"Date Created\"}},{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"method\",\"label\":\"Method\"}},{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"endpoint\",\"label\":\"Endpoint\"}},{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"status_code\",\"label\":\"Status Code\"}},{\"className\":\"org.joget.apps.form.lib.TextArea\",\"properties\":{\"id\":\"payload\",\"label\":\"Payload\"}},{\"className\":\"org.joget.apps.form.lib.TextArea\",\"properties\":{\"id\":\"response\",\"label\":\"Response\"}}]}";
+                formDef.setJson(formJson);
+                formDao.add(formDef);
+                LogUtil.info(getClassName(), "Auto-created Form Definition: " + formId);
+            }
+            
+            // 2. Create Data List Definition
+            org.joget.apps.app.dao.DatalistDefinitionDao listDao = (org.joget.apps.app.dao.DatalistDefinitionDao) ac.getBean("datalistDefinitionDao");
+            String listId = rawTableName + "_list";
+            org.joget.apps.app.model.DatalistDefinition datalist = listDao.loadById(listId, appDef);
+            if (datalist == null) {
+                datalist = new org.joget.apps.app.model.DatalistDefinition();
+                datalist.setId(listId);
+                datalist.setName("API Logs List - " + rawTableName);
+                datalist.setAppDefinition(appDef);
+                
+                String listJson = "{\"id\":\"" + listId + "\",\"name\":\"API Logs List - " + rawTableName + "\",\"binder\":{\"className\":\"org.joget.apps.datalist.lib.FormRowDataListBinder\",\"properties\":{\"formDefId\":\"" + formId + "\"}},\"columns\":[{\"id\":\"column_0\",\"name\":\"dateCreated\",\"label\":\"Date Created\",\"sortable\":\"true\"},{\"id\":\"column_1\",\"name\":\"method\",\"label\":\"Method\",\"sortable\":\"true\"},{\"id\":\"column_2\",\"name\":\"endpoint\",\"label\":\"Endpoint\",\"sortable\":\"true\"},{\"id\":\"column_3\",\"name\":\"status_code\",\"label\":\"Status Code\",\"sortable\":\"true\"},{\"id\":\"column_4\",\"name\":\"payload\",\"label\":\"Payload\",\"sortable\":\"false\"},{\"id\":\"column_5\",\"name\":\"response\",\"label\":\"Response\",\"sortable\":\"false\"}]}";
+                datalist.setJson(listJson);
+                listDao.add(datalist);
+                LogUtil.info(getClassName(), "Auto-created Data List Definition: " + listId);
+            }
+        } catch (Exception e) {
+            LogUtil.error(getClassName(), e, "Error auto-creating Data List for API Logs");
         }
     }
 }
