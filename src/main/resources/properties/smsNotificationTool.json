@@ -583,27 +583,5 @@
                 "description": "Optional workflow variable name to store the raw API response text (e.g., responseBody or apiOutput)."
             }
         ]
-    },
-    {
-        "title": "Save Data (Audit Log)",
-        "properties": [
-            {
-                "name": "tableName",
-                "label": "Table Name",
-                "type": "textfield",
-                "value": "api_logs",
-                "description": "Leave blank to skip saving audit log. Application ID is automatically prepended (e.g. appID_api_logs). Prefix 'app_fd_' is added automatically. Will save Method, Endpoint, Payload, Response, and Status Code."
-            },
-            {
-                "name": "autoCreateList",
-                "label": "Auto Create List",
-                "type": "checkbox",
-                "value": "false",
-                "options": [
-                    { "value": "true", "label": "Generate Form & Data List in App Builder" }
-                ],
-                "description": "Automatically generates a Form and Data List in the Joget App Builder for viewing this audit table."
-            }
-        ]
     }
 ]

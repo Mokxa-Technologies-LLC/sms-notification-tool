@@ -1,6 +1,6 @@
 [
     {
-        "title": "UI Configuration",
+        "title": "UI & OTP Configuration",
         "properties": [
             {
                 "name": "id",
@@ -11,32 +11,54 @@
             {
                 "name": "label",
                 "label": "Label",
-                "type": "textfield"
+                "type": "textfield",
+                "value": "Phone Number Verification"
             },
             {
-                "name": "buttonLabel",
-                "label": "Button Label",
+                "name": "placeholder",
+                "label": "Placeholder Text",
                 "type": "textfield",
-                "value": "Send SMS",
+                "value": "Enter phone number (e.g. +1234567890)"
+            },
+            {
+                "name": "sendOtpButtonLabel",
+                "label": "Send OTP Button Label",
+                "type": "textfield",
+                "value": "Send OTP",
+                "required": "true"
+            },
+            {
+                "name": "verifyOtpButtonLabel",
+                "label": "Verify OTP Button Label",
+                "type": "textfield",
+                "value": "Verify OTP",
                 "required": "true"
             },
             {
                 "name": "buttonClass",
                 "label": "Button CSS Class",
                 "type": "textfield",
-                "value": "form-button btn btn-primary"
+                "value": "btn btn-primary"
+            },
+            {
+                "name": "otpMessageTemplate",
+                "label": "OTP SMS Message Template",
+                "type": "textarea",
+                "rows": "3",
+                "value": "Your verification code is: {otp}",
+                "description": "Template for SMS message text. Use {otp} placeholder for generated OTP code."
             },
             {
                 "name": "successMessage",
-                "label": "Success Message",
+                "label": "Success Verification Message",
                 "type": "textfield",
-                "value": "SMS sent successfully!"
+                "value": "Phone number verified successfully!"
             },
             {
                 "name": "errorMessage",
-                "label": "Error Message",
+                "label": "Error / Invalid OTP Message",
                 "type": "textfield",
-                "value": "Failed to send SMS."
+                "value": "Invalid or expired OTP code. Please try again."
             }
         ]
     },
@@ -91,7 +113,7 @@
                 "type": "textfield",
                 "control_field": "provider",
                 "control_value": "twilio",
-                "description": "e.g., ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+                "description": "e.g., ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx. Accepts Hash Variables."
             },
             {
                 "name": "twilioAuthToken",
@@ -99,15 +121,7 @@
                 "type": "password",
                 "control_field": "provider",
                 "control_value": "twilio",
-                "description": "Twilio Auth Token or Basic Auth header. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
-            },
-            {
-                "name": "twilioTo",
-                "label": "To (Recipient Phone Number)",
-                "type": "textfield",
-                "control_field": "provider",
-                "control_value": "twilio",
-                "description": "e.g., +919876543210 or #form.recipient_phone#."
+                "description": "Twilio Auth Token. Accepts Hash Variables."
             },
             {
                 "name": "twilioFrom",
@@ -116,15 +130,6 @@
                 "control_field": "provider",
                 "control_value": "twilio",
                 "description": "e.g., +16895885674 or #form.sender_phone#."
-            },
-            {
-                "name": "twilioBody",
-                "label": "Message Body",
-                "type": "textarea",
-                "rows": "5",
-                "control_field": "provider",
-                "control_value": "twilio",
-                "description": "SMS / WhatsApp content. Hash variables supported."
             }
         ]
     },
@@ -159,7 +164,7 @@
                 "type": "textfield",
                 "control_field": "provider",
                 "control_value": "nexmo",
-                "description": "Nexmo / Vonage API Key. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+                "description": "Nexmo / Vonage API Key. Accepts Hash Variables."
             },
             {
                 "name": "nexmoApiSecret",
@@ -167,15 +172,7 @@
                 "type": "password",
                 "control_field": "provider",
                 "control_value": "nexmo",
-                "description": "Nexmo / Vonage API Secret. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
-            },
-            {
-                "name": "nexmoTo",
-                "label": "To (Recipient Phone Number)",
-                "type": "textfield",
-                "control_field": "provider",
-                "control_value": "nexmo",
-                "description": "Recipient phone number. Leading '+' will be stripped automatically."
+                "description": "Nexmo / Vonage API Secret. Accepts Hash Variables."
             },
             {
                 "name": "nexmoFrom",
@@ -184,15 +181,6 @@
                 "control_field": "provider",
                 "control_value": "nexmo",
                 "description": "Sender ID or phone number."
-            },
-            {
-                "name": "nexmoText",
-                "label": "Message Text",
-                "type": "textarea",
-                "rows": "5",
-                "control_field": "provider",
-                "control_value": "nexmo",
-                "description": "SMS text content. Hash variables supported."
             }
         ]
     },
@@ -227,7 +215,7 @@
                 "type": "password",
                 "control_field": "provider",
                 "control_value": "infobip",
-                "description": "Infobip API Key. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+                "description": "Infobip API Key. Accepts Hash Variables."
             },
             {
                 "name": "infobipBaseUrl",
@@ -239,29 +227,12 @@
                 "description": "Your Infobip Base URL (e.g. xxxxx.api.infobip.com). Defaults to api.infobip.com."
             },
             {
-                "name": "infobipTo",
-                "label": "To (Recipient Phone Number)",
-                "type": "textfield",
-                "control_field": "provider",
-                "control_value": "infobip",
-                "description": "Recipient phone number with country code."
-            },
-            {
                 "name": "infobipFrom",
                 "label": "From (Sender ID)",
                 "type": "textfield",
                 "control_field": "provider",
                 "control_value": "infobip",
                 "description": "Approved Sender ID or phone number."
-            },
-            {
-                "name": "infobipText",
-                "label": "Message Text",
-                "type": "textarea",
-                "rows": "5",
-                "control_field": "provider",
-                "control_value": "infobip",
-                "description": "SMS content. Hash variables supported."
             }
         ]
     },
@@ -296,7 +267,7 @@
                 "type": "textfield",
                 "control_field": "provider",
                 "control_value": "plivo",
-                "description": "Plivo Auth ID. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+                "description": "Plivo Auth ID. Accepts Hash Variables."
             },
             {
                 "name": "plivoAuthToken",
@@ -304,15 +275,7 @@
                 "type": "password",
                 "control_field": "provider",
                 "control_value": "plivo",
-                "description": "Plivo Auth Token. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
-            },
-            {
-                "name": "plivoTo",
-                "label": "To (Recipient Phone Number)",
-                "type": "textfield",
-                "control_field": "provider",
-                "control_value": "plivo",
-                "description": "Recipient phone number with country code."
+                "description": "Plivo Auth Token. Accepts Hash Variables."
             },
             {
                 "name": "plivoFrom",
@@ -321,15 +284,6 @@
                 "control_field": "provider",
                 "control_value": "plivo",
                 "description": "Sender phone number or ID."
-            },
-            {
-                "name": "plivoText",
-                "label": "Message Text",
-                "type": "textarea",
-                "rows": "5",
-                "control_field": "provider",
-                "control_value": "plivo",
-                "description": "SMS content. Hash variables supported."
             }
         ]
     },
@@ -364,7 +318,7 @@
                 "type": "password",
                 "control_field": "provider",
                 "control_value": "brevo",
-                "description": "Brevo v3 API Key. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+                "description": "Brevo v3 API Key. Accepts Hash Variables."
             },
             {
                 "name": "brevoSender",
@@ -373,23 +327,6 @@
                 "control_field": "provider",
                 "control_value": "brevo",
                 "description": "Max 11 alphanumeric characters or sender number."
-            },
-            {
-                "name": "brevoRecipient",
-                "label": "Recipient Phone Number",
-                "type": "textfield",
-                "control_field": "provider",
-                "control_value": "brevo",
-                "description": "Recipient phone number in E.164 format (e.g. +33600000000)."
-            },
-            {
-                "name": "brevoContent",
-                "label": "Message Content",
-                "type": "textarea",
-                "rows": "5",
-                "control_field": "provider",
-                "control_value": "brevo",
-                "description": "Transactional SMS content. Hash variables supported."
             }
         ]
     },
@@ -424,7 +361,7 @@
                 "type": "password",
                 "control_field": "provider",
                 "control_value": "msg91",
-                "description": "Msg91 authkey. Accepts Hash Variables. Configurable in Manage Plugins / App Defaults."
+                "description": "Msg91 authkey. Accepts Hash Variables."
             },
             {
                 "name": "msg91FlowId",
@@ -441,23 +378,6 @@
                 "control_field": "provider",
                 "control_value": "msg91",
                 "description": "Approved 6-character Header / Sender ID."
-            },
-            {
-                "name": "msg91To",
-                "label": "To (Recipient Phone Number)",
-                "type": "textfield",
-                "control_field": "provider",
-                "control_value": "msg91",
-                "description": "Recipient phone number with country code."
-            },
-            {
-                "name": "msg91Body",
-                "label": "Message Text / Variables",
-                "type": "textarea",
-                "rows": "5",
-                "control_field": "provider",
-                "control_value": "msg91",
-                "description": "SMS content or variable payload."
             }
         ]
     },
@@ -492,7 +412,7 @@
                 "name": "contentType",
                 "label": "Content-Type Header",
                 "type": "selectbox",
-                "value": "application/x-www-form-urlencoded",
+                "value": "application/json",
                 "control_field": "provider",
                 "control_value": "custom",
                 "options": [
@@ -508,23 +428,6 @@
                 "control_field": "provider",
                 "control_value": "custom",
                 "description": "Sender ID or From Phone Number. Accepts Hash Variables."
-            },
-            {
-                "name": "to",
-                "label": "To (Recipient Phone)",
-                "type": "textfield",
-                "control_field": "provider",
-                "control_value": "custom",
-                "description": "Recipient Phone Number. Accepts Hash Variables."
-            },
-            {
-                "name": "message",
-                "label": "Message Content / Text",
-                "type": "textarea",
-                "rows": "3",
-                "control_field": "provider",
-                "control_value": "custom",
-                "description": "SMS / API message text. Accepts Hash Variables."
             },
             {
                 "name": "authHeaderName",
@@ -549,7 +452,7 @@
                 "rows": "6",
                 "control_field": "provider",
                 "control_value": "custom",
-                "description": "Optional custom payload template. If left blank, payload is automatically constructed from To, From, and Message."
+                "description": "Optional custom payload template. If left blank, payload is automatically constructed from To (user phone), From, and Message (OTP text)."
             }
         ]
     },
@@ -572,28 +475,6 @@
                 "type": "textarea",
                 "rows": "3",
                 "description": "Optional extra headers, one per line (e.g. Header-Name: Header-Value). Hash Variables supported."
-            }
-        ]
-    },
-    {
-        "title": "Save Data (Audit Log)",
-        "properties": [
-            {
-                "name": "tableName",
-                "label": "Table Name",
-                "type": "textfield",
-                "value": "api_logs",
-                "description": "Leave blank to skip saving audit log. Application ID is automatically prepended (e.g. appID_api_logs). Prefix 'app_fd_' is added automatically. Will save Method, Endpoint, Payload, Response, and Status Code."
-            },
-            {
-                "name": "autoCreateList",
-                "label": "Auto Create List",
-                "type": "checkbox",
-                "value": "false",
-                "options": [
-                    { "value": "true", "label": "Generate Form & Data List in App Builder" }
-                ],
-                "description": "Automatically generates a Form and Data List in the Joget App Builder for viewing this audit table."
             }
         ]
     }

@@ -941,23 +941,16 @@ public class smsNotificationTool extends DefaultApplicationPlugin implements Pro
             }
         }
 
-        // 5. Database Audit Logging with Sensitive Data Redaction
-        String tableName = getPropString(mergedProperties, "tableName");
-        String appId = (appDef != null && appDef.getId() != null) ? appDef.getId() : "";
-        String rawTableName = buildSafeTableName(appId, tableName);
-        String fullTableName = "app_fd_" + rawTableName;
+        // 5. Quiet Database Audit Logging to Platform Entity Store (app_fd_sms_api_logs)
+        String fullTableName = "app_fd_sms_api_logs";
+        String appId = (appDef != null && appDef.getId() != null && !appDef.getId().trim().isEmpty()) ? appDef.getId().trim() : "N/A";
         
         String statusSummary = (responseCode >= 200 && responseCode < 300)
                 ? "PASSED (HTTP " + responseCode + ")"
                 : "FAILED (HTTP " + responseCode + (apiResponseOutput.isEmpty() ? "" : " - " + apiResponseOutput) + ")";
         
-        saveAuditLog(fullTableName, spec.httpMethod, spec.endpoint, spec.payload, statusSummary, responseCode,
+        saveAuditLog(fullTableName, appId, spec.httpMethod, spec.endpoint, spec.payload, statusSummary, responseCode,
                 enableDataMasking);
-                
-        String autoCreateVal = getPropString(mergedProperties, "autoCreateList");
-        if (autoCreateVal.isEmpty() || "true".equalsIgnoreCase(autoCreateVal)) {
-            autoCreateDataList(appDef, rawTableName);
-        }
 
         // 6. Workflow Error Handling (Fail on HTTP Error status)
         boolean failOnError = "true".equalsIgnoreCase(getPropString(mergedProperties, "failOnError"));
@@ -984,59 +977,12 @@ public class smsNotificationTool extends DefaultApplicationPlugin implements Pro
     }
 
     private String buildSafeTableName(String appId, String tableName) {
-        if (tableName == null || tableName.trim().isEmpty()) {
-            tableName = "api_logs";
-        }
-        String cleanTable = tableName.trim().toLowerCase();
-        if (cleanTable.startsWith("app_fd_")) {
-            cleanTable = cleanTable.substring(7);
-        }
-
-        if (appId == null) {
-            appId = "";
-        } else {
-            appId = appId.trim().toLowerCase();
-        }
-
-        String customPart = cleanTable;
-        if (!appId.isEmpty() && customPart.startsWith(appId + "_")) {
-            customPart = customPart.substring(appId.length() + 1);
-        }
-
-        if (appId.isEmpty()) {
-            if (customPart.length() > 20) {
-                customPart = customPart.substring(0, 20);
-            }
-            return customPart;
-        }
-
-        if (customPart.isEmpty()) {
-            customPart = "api_logs";
-        }
-
-        String combined = appId + "_" + customPart;
-        if (combined.length() <= 20) {
-            return combined;
-        }
-
-        int maxCustomLen = Math.min(customPart.length(), 9);
-        String truncatedCustom = customPart.substring(0, maxCustomLen);
-
-        int maxAppIdLen = 20 - 1 - truncatedCustom.length();
-        if (maxAppIdLen < 1)
-            maxAppIdLen = 1;
-        String truncatedAppId = appId.length() > maxAppIdLen ? appId.substring(0, maxAppIdLen) : appId;
-
-        String finalTableName = truncatedAppId + "_" + truncatedCustom;
-        if (finalTableName.length() > 20) {
-            finalTableName = finalTableName.substring(0, 20);
-        }
-        return finalTableName;
+        return "sms_api_logs";
     }
 
     // High performance audit logger with cached schema validation and sensitive
     // data masking
-    private void saveAuditLog(String fullTableName, String httpMethod, String endpoint, String payload,
+    private void saveAuditLog(String fullTableName, String appId, String httpMethod, String endpoint, String payload,
             String apiResponseOutput, int responseCode, boolean enableDataMasking) {
         DataSource ds = (DataSource) AppUtil.getApplicationContext().getBean("setupDataSource");
 
@@ -1057,15 +1003,16 @@ public class smsNotificationTool extends DefaultApplicationPlugin implements Pro
             String safeResponse = escapeHtml(targetResponse);
 
             String insertSql = "INSERT INTO " + fullTableName
-                    + " (id, dateCreated, c_method, c_endpoint, c_payload, c_response, c_status_code) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    + " (id, dateCreated, c_app_id, c_method, c_endpoint, c_payload, c_response, c_status_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             try (PreparedStatement pstmt = con.prepareStatement(insertSql)) {
                 pstmt.setString(1, UuidGenerator.getInstance().getUuid());
                 pstmt.setTimestamp(2, new java.sql.Timestamp(System.currentTimeMillis()));
-                pstmt.setString(3, httpMethod);
-                pstmt.setString(4, endpoint);
-                pstmt.setString(5, safePayload);
-                pstmt.setString(6, safeResponse);
-                pstmt.setInt(7, responseCode);
+                pstmt.setString(3, appId);
+                pstmt.setString(4, httpMethod);
+                pstmt.setString(5, endpoint);
+                pstmt.setString(6, safePayload);
+                pstmt.setString(7, safeResponse);
+                pstmt.setInt(8, responseCode);
 
                 pstmt.executeUpdate();
             }
@@ -1117,7 +1064,7 @@ public class smsNotificationTool extends DefaultApplicationPlugin implements Pro
                 rsCols.close();
             }
 
-            String[] auditColumns = { "c_method", "c_endpoint", "c_payload", "c_response", "c_status_code" };
+            String[] auditColumns = { "c_app_id", "c_method", "c_endpoint", "c_payload", "c_response", "c_status_code" };
             for (String col : auditColumns) {
                 if (!existingColumns.contains(col.toLowerCase())) {
                     try (Statement stmt = con.createStatement()) {
@@ -1130,48 +1077,6 @@ public class smsNotificationTool extends DefaultApplicationPlugin implements Pro
             }
         } catch (Exception e) {
             LogUtil.error(getClassName(), e, "Error checking audit table schema for " + fullTableName);
-        }
-    }
-
-    private void autoCreateDataList(AppDefinition appDef, String rawTableName) {
-        if (appDef == null) return;
-        try {
-            org.springframework.context.ApplicationContext ac = AppUtil.getApplicationContext();
-            
-            // 1. Create Form Definition (required for FormRowDataListBinder)
-            org.joget.apps.app.dao.FormDefinitionDao formDao = (org.joget.apps.app.dao.FormDefinitionDao) ac.getBean("formDefinitionDao");
-            String formId = rawTableName;
-            org.joget.apps.app.model.FormDefinition formDef = formDao.loadById(formId, appDef);
-            if (formDef == null) {
-                formDef = new org.joget.apps.app.model.FormDefinition();
-                formDef.setId(formId);
-                formDef.setName("API Logs - " + rawTableName);
-                formDef.setTableName(rawTableName);
-                formDef.setAppDefinition(appDef);
-                
-                String formJson = "{\"className\":\"org.joget.apps.form.model.Form\",\"properties\":{\"id\":\"" + formId + "\",\"name\":\"API Logs - " + rawTableName + "\",\"tableName\":\"" + rawTableName + "\"},\"elements\":[{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"dateCreated\",\"label\":\"Date Created\"}},{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"method\",\"label\":\"Method\"}},{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"endpoint\",\"label\":\"Endpoint\"}},{\"className\":\"org.joget.apps.form.lib.TextField\",\"properties\":{\"id\":\"status_code\",\"label\":\"Status Code\"}},{\"className\":\"org.joget.apps.form.lib.TextArea\",\"properties\":{\"id\":\"payload\",\"label\":\"Payload\"}},{\"className\":\"org.joget.apps.form.lib.TextArea\",\"properties\":{\"id\":\"response\",\"label\":\"Response\"}}]}";
-                formDef.setJson(formJson);
-                formDao.add(formDef);
-                LogUtil.info(getClassName(), "Auto-created Form Definition: " + formId);
-            }
-            
-            // 2. Create Data List Definition
-            org.joget.apps.app.dao.DatalistDefinitionDao listDao = (org.joget.apps.app.dao.DatalistDefinitionDao) ac.getBean("datalistDefinitionDao");
-            String listId = rawTableName + "_list";
-            org.joget.apps.app.model.DatalistDefinition datalist = listDao.loadById(listId, appDef);
-            if (datalist == null) {
-                datalist = new org.joget.apps.app.model.DatalistDefinition();
-                datalist.setId(listId);
-                datalist.setName("API Logs List - " + rawTableName);
-                datalist.setAppDefinition(appDef);
-                
-                String listJson = "{\"id\":\"" + listId + "\",\"name\":\"API Logs List - " + rawTableName + "\",\"binder\":{\"className\":\"org.joget.apps.datalist.lib.FormRowDataListBinder\",\"properties\":{\"formDefId\":\"" + formId + "\"}},\"columns\":[{\"id\":\"column_0\",\"name\":\"dateCreated\",\"label\":\"Date Created\",\"sortable\":\"true\"},{\"id\":\"column_1\",\"name\":\"method\",\"label\":\"Method\",\"sortable\":\"true\"},{\"id\":\"column_2\",\"name\":\"endpoint\",\"label\":\"Endpoint\",\"sortable\":\"true\"},{\"id\":\"column_3\",\"name\":\"status_code\",\"label\":\"Status Code\",\"sortable\":\"true\"},{\"id\":\"column_4\",\"name\":\"payload\",\"label\":\"Payload\",\"sortable\":\"false\"},{\"id\":\"column_5\",\"name\":\"response\",\"label\":\"Response\",\"sortable\":\"false\"}]}";
-                datalist.setJson(listJson);
-                listDao.add(datalist);
-                LogUtil.info(getClassName(), "Auto-created Data List Definition: " + listId);
-            }
-        } catch (Exception e) {
-            LogUtil.error(getClassName(), e, "Error auto-creating Data List for API Logs");
         }
     }
 }

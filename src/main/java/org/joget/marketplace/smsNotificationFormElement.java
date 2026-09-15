@@ -14,19 +14,25 @@ import org.joget.apps.form.service.FormUtil;
 import org.joget.commons.util.LogUtil;
 import org.joget.plugin.base.PluginWebSupport;
 import org.joget.plugin.property.model.PropertyEditable;
+import org.joget.workflow.util.WorkflowUtil;
 import org.springframework.context.ApplicationContext;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.HashMap;
 import java.util.Map;
+
+import org.joget.apps.form.model.FormRowSet;
 
 public class smsNotificationFormElement extends Element implements FormBuilderPaletteElement, PluginWebSupport, PropertyEditable {
 
     @Override
     public String getName() {
-        return "SMS Form Button";
+        return "Phone Number Verification Tool";
     }
 
     @Override
@@ -36,12 +42,12 @@ public class smsNotificationFormElement extends Element implements FormBuilderPa
 
     @Override
     public String getDescription() {
-        return "A button that triggers an SMS or API call directly from the form without submitting it.";
+        return "A form field for phone number input with OTP SMS verification prior to form submission.";
     }
 
     @Override
     public String getLabel() {
-        return "SMS Button";
+        return "Phone Number Verification";
     }
 
     @Override
@@ -66,23 +72,64 @@ public class smsNotificationFormElement extends Element implements FormBuilderPa
 
     @Override
     public String getFormBuilderIcon() {
-        return "<i class=\"fas fa-sms\"></i>";
+        return "<i class=\"fas fa-mobile-alt\"></i>";
     }
 
     @Override
     public String getFormBuilderTemplate() {
-        return "<button class=\"btn btn-primary\">SMS Button</button>";
+        return "<div class=\"form-group\"><label class=\"label\">Phone Number Verification</label><input type=\"text\" class=\"form-control\" placeholder=\"Enter Phone Number\" disabled/></div>";
+    }
+
+    @Override
+    public FormRowSet formatData(FormData formData) {
+        FormRowSet rowSet = super.formatData(formData);
+        String elementId = getPropertyString("id");
+        if (elementId != null && formData != null) {
+            String phone = formData.getRequestParameter(elementId);
+            HttpServletRequest request = WorkflowUtil.getHttpServletRequest();
+            if (request != null) {
+                HttpSession session = request.getSession(false);
+                Object verifiedObj = session != null ? session.getAttribute("OTP_VERIFIED_" + elementId) : null;
+                Object verifiedPhoneObj = session != null ? session.getAttribute("OTP_VERIFIED_PHONE_" + elementId) : null;
+
+                boolean isVerified = Boolean.TRUE.equals(verifiedObj) 
+                        && phone != null 
+                        && !phone.trim().isEmpty() 
+                        && phone.trim().equalsIgnoreCase(String.valueOf(verifiedPhoneObj));
+
+                if (!isVerified) {
+                    String errorMessage = getPropertyString("errorMessage");
+                    if (errorMessage == null || errorMessage.trim().isEmpty()) {
+                        errorMessage = "Security Error: Phone number must be verified using OTP before submitting the form.";
+                    }
+                    formData.addFormError(elementId, errorMessage);
+                }
+            }
+        }
+        return rowSet;
     }
 
     @Override
     public String renderTemplate(FormData formData, Map dataModel) {
         String elementId = getPropertyString("id");
         if (elementId == null || elementId.trim().isEmpty()) {
-            elementId = "sms_btn_" + System.currentTimeMillis();
+            elementId = "phone_verify_" + System.currentTimeMillis();
         }
-        String buttonLabel = getPropertyString("buttonLabel");
-        if (buttonLabel == null || buttonLabel.trim().isEmpty()) {
-            buttonLabel = "Send SMS / Execute API";
+        String label = getPropertyString("label");
+        if (label == null || label.trim().isEmpty()) {
+            label = "Phone Number";
+        }
+        String placeholder = getPropertyString("placeholder");
+        if (placeholder == null || placeholder.trim().isEmpty()) {
+            placeholder = "Enter phone number (e.g. +1234567890)";
+        }
+        String sendOtpButtonLabel = getPropertyString("sendOtpButtonLabel");
+        if (sendOtpButtonLabel == null || sendOtpButtonLabel.trim().isEmpty()) {
+            sendOtpButtonLabel = "Send OTP";
+        }
+        String verifyOtpButtonLabel = getPropertyString("verifyOtpButtonLabel");
+        if (verifyOtpButtonLabel == null || verifyOtpButtonLabel.trim().isEmpty()) {
+            verifyOtpButtonLabel = "Verify OTP";
         }
         String buttonClass = getPropertyString("buttonClass");
         if (buttonClass == null || buttonClass.trim().isEmpty()) {
@@ -90,72 +137,29 @@ public class smsNotificationFormElement extends Element implements FormBuilderPa
         }
         String successMessage = getPropertyString("successMessage");
         if (successMessage == null || successMessage.trim().isEmpty()) {
-            successMessage = "SMS / API call sent successfully!";
+            successMessage = "Phone number verified successfully!";
         }
         String errorMessage = getPropertyString("errorMessage");
         if (errorMessage == null || errorMessage.trim().isEmpty()) {
-            errorMessage = "Failed to send SMS / API call.";
+            errorMessage = "Invalid or expired OTP code. Please try again.";
         }
 
-        String provider = getPropertyString("provider");
-        if (provider == null || provider.trim().isEmpty()) {
-            provider = "custom";
+        String existingValue = FormUtil.getElementPropertyValue(this, formData);
+        if (existingValue == null) {
+            existingValue = "";
         }
 
-        // Custom API fields
-        String apiEndpoint = getPropertyString("apiEndpoint");
-        String httpMethod = getPropertyString("httpMethod");
-        if (httpMethod == null || httpMethod.trim().isEmpty()) httpMethod = "POST";
-        String contentType = getPropertyString("contentType");
-        if (contentType == null || contentType.trim().isEmpty()) contentType = "application/json";
-        String from = getPropertyString("from");
-        String to = getPropertyString("to");
-        String message = getPropertyString("message");
-        String authHeaderName = getPropertyString("authHeaderName");
-        if (authHeaderName == null || authHeaderName.trim().isEmpty()) authHeaderName = "Authorization";
-        String authHeaderValue = getPropertyString("authHeaderValue");
-        String customHeaders = getPropertyString("customHeaders");
-        String payloadTemplate = getPropertyString("payloadTemplate");
-
-        // Twilio fields
-        String twilioAccountSid = getPropertyString("twilioAccountSid");
-        String twilioAuthToken = getPropertyString("twilioAuthToken");
-        String twilioTo = getPropertyString("twilioTo");
-        String twilioFrom = getPropertyString("twilioFrom");
-        String twilioBody = getPropertyString("twilioBody");
-
-        // Nexmo fields
-        String nexmoApiKey = getPropertyString("nexmoApiKey");
-        String nexmoApiSecret = getPropertyString("nexmoApiSecret");
-        String nexmoTo = getPropertyString("nexmoTo");
-        String nexmoFrom = getPropertyString("nexmoFrom");
-        String nexmoText = getPropertyString("nexmoText");
-
-        // Infobip fields
-        String infobipBaseUrl = getPropertyString("infobipBaseUrl");
-        String infobipApiKey = getPropertyString("infobipApiKey");
-        String infobipTo = getPropertyString("infobipTo");
-        String infobipFrom = getPropertyString("infobipFrom");
-        String infobipText = getPropertyString("infobipText");
-
-        // Plivo fields
-        String plivoAuthId = getPropertyString("plivoAuthId");
-        String plivoAuthToken = getPropertyString("plivoAuthToken");
-        String plivoTo = getPropertyString("plivoTo");
-        String plivoFrom = getPropertyString("plivoFrom");
-        String plivoText = getPropertyString("plivoText");
-
-        // Brevo fields
-        String brevoApiKey = getPropertyString("brevoApiKey");
-        String brevoSender = getPropertyString("brevoSender");
-        String brevoRecipient = getPropertyString("brevoRecipient");
-        String brevoContent = getPropertyString("brevoContent");
-
-        // Msg91 fields
-        String msg91AuthKey = getPropertyString("msg91AuthKey");
-        String msg91FlowId = getPropertyString("msg91FlowId");
-        String msg91Sender = getPropertyString("msg91Sender");
-        String msg91To = getPropertyString("msg91To");
+        // Check if already verified in session
+        boolean isAlreadyVerified = false;
+        HttpServletRequest req = WorkflowUtil.getHttpServletRequest();
+        if (req != null) {
+            HttpSession sess = req.getSession(false);
+            Object verifiedObj = sess != null ? sess.getAttribute("OTP_VERIFIED_" + elementId) : null;
+            Object verifiedPhoneObj = sess != null ? sess.getAttribute("OTP_VERIFIED_PHONE_" + elementId) : null;
+            if (Boolean.TRUE.equals(verifiedObj) && !existingValue.trim().isEmpty() && existingValue.trim().equalsIgnoreCase(String.valueOf(verifiedPhoneObj))) {
+                isAlreadyVerified = true;
+            }
+        }
 
         AppDefinition appDef = AppUtil.getCurrentAppDefinition();
         String appId = appDef != null ? appDef.getId() : "";
@@ -174,323 +178,221 @@ public class smsNotificationFormElement extends Element implements FormBuilderPa
         String url = "/jw/web/json/app/" + appId + "/" + appVersion + "/plugin/" + pluginName + "/service?formDefId=" + formDefId + "&elementId=" + elementId;
 
         StringBuilder sb = new StringBuilder();
-        sb.append("<style type=\"text/css\">");
-        sb.append("#sms_widget_").append(elementId).append(" { background:#ffffff; border:1px solid #d1d3e2 !important; border-radius:8px; padding:18px; margin:15px 0; box-shadow:0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15); font-family:inherit; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .row { display:flex; flex-wrap:wrap; margin-right:-8px; margin-left:-8px; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .col-md-6 { flex:0 0 50%; max-width:50%; padding-right:8px; padding-left:8px; box-sizing:border-box; }\n");
-        sb.append("@media (max-width: 768px) { #sms_widget_").append(elementId).append(" .col-md-6 { flex:0 0 100%; max-width:100%; } }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .form-group { margin-bottom:12px; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" label { display:block; margin-bottom:4px; font-weight:600; font-size:13px; color:#4e73df; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" input[type='text'], #sms_widget_").append(elementId).append(" input[type='password'], #sms_widget_").append(elementId).append(" select, #sms_widget_").append(elementId).append(" textarea { width:100%; padding:7px 10px; font-size:13px; border:1px solid #d1d3e2; border-radius:4px; box-sizing:border-box; background-color:#fff; color:#495057; transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" input:focus, #sms_widget_").append(elementId).append(" select:focus, #sms_widget_").append(elementId).append(" textarea:focus { border-color:#bac8f3; outline:0; box-shadow:0 0 0 0.2rem rgba(78,115,223,0.25); }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .btn { display:inline-block; font-weight:600; text-align:center; vertical-align:middle; cursor:pointer; padding:8px 18px; font-size:14px; border-radius:4px; border:none; transition: color .15s ease-in-out,background-color .15s ease-in-out; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .btn-primary { background-color:#4e73df; color:#ffffff; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .btn-primary:hover { background-color:#2e59d9; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .alert { padding:10px 14px; border-radius:4px; font-size:13px; margin-top:12px; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .alert-success { background-color:#d4edda; color:#155724; border:1px solid #c3e6cb; }\n");
-        sb.append("#sms_widget_").append(elementId).append(" .alert-danger { background-color:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }\n");
-        sb.append("</style>");
-        
-        sb.append("<div id=\"sms_widget_").append(elementId).append("\" class=\"sms-notification-widget card p-3 border rounded my-3 form-cell-element form-cell\">");
-        sb.append("  <h5 class=\"card-title text-primary mb-3\" style=\"font-weight:600; margin-top:0;\"><i class=\"fas fa-paper-plane mr-2\"></i>SMS & API Dispatcher</h5>");
-        
-        // Provider Dropdown
-        sb.append("  <div class=\"form-group mb-3\">");
-        sb.append("    <label for=\"").append(elementId).append("_provider\" class=\"font-weight-bold\" style=\"font-size:14px;\">SMS Provider / API Type:</label>");
-        sb.append("    <select id=\"").append(elementId).append("_provider\" name=\"provider\" class=\"form-control sms-provider-select\">");
-        sb.append("      <option value=\"custom\"").append("custom".equalsIgnoreCase(provider) ? " selected" : "").append(">Custom / Generic REST API</option>");
-        sb.append("      <option value=\"twilio\"").append("twilio".equalsIgnoreCase(provider) ? " selected" : "").append(">Twilio SMS / WhatsApp</option>");
-        sb.append("      <option value=\"nexmo\"").append("nexmo".equalsIgnoreCase(provider) ? " selected" : "").append(">Vonage / Nexmo SMS</option>");
-        sb.append("      <option value=\"infobip\"").append("infobip".equalsIgnoreCase(provider) ? " selected" : "").append(">Infobip SMS</option>");
-        sb.append("      <option value=\"plivo\"").append("plivo".equalsIgnoreCase(provider) ? " selected" : "").append(">Plivo SMS</option>");
-        sb.append("      <option value=\"brevo\"").append("brevo".equalsIgnoreCase(provider) ? " selected" : "").append(">Brevo Transactional SMS</option>");
-        sb.append("      <option value=\"msg91\"").append("msg91".equalsIgnoreCase(provider) ? " selected" : "").append(">Msg91 SMS</option>");
-        sb.append("    </select>");
-        sb.append("  </div>");
+        sb.append("<style type=\"text/css\">\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" { background:#ffffff; border:1px solid #e3e6f0; border-radius:8px; padding:18px; margin:15px 0; font-family:inherit; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" .form-group { margin-bottom:12px; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" label.phone-label { display:block; margin-bottom:6px; font-weight:600; font-size:14px; color:#2e384d; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" .input-group-custom { display:flex; gap:8px; align-items:center; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" input.form-control { flex:1; padding:8px 12px; font-size:14px; border:1px solid #d1d3e2; border-radius:6px; background-color:#fff; color:#495057; transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" input.form-control:focus { border-color:#4e73df; outline:0; box-shadow:0 0 0 0.2rem rgba(78,115,223,0.25); }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" .btn { white-space:nowrap; font-weight:600; padding:8px 16px; font-size:14px; border-radius:6px; cursor:pointer; transition: all .15s ease-in-out; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" .alert { padding:10px 14px; border-radius:6px; font-size:13px; margin-top:10px; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" .alert-success { background-color:#d4edda; color:#155724; border:1px solid #c3e6cb; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" .alert-danger { background-color:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }\n");
+        sb.append("#phone_verify_widget_").append(elementId).append(" .verified-badge { display:inline-flex; align-items:center; gap:6px; color:#1cc88a; font-weight:600; font-size:14px; background:#e8fadf; padding:6px 12px; border-radius:6px; border:1px solid #b7f4cf; }\n");
+        sb.append(".otp-locked-section { opacity:0.5; pointer-events:none !important; user-select:none !important; filter:blur(2.5px); transition: all 0.3s ease; }\n");
+        sb.append(".otp-locked-banner { background:#fff3cd; border:1px solid #ffeeba; color:#856404; padding:10px 14px; border-radius:6px; font-weight:600; font-size:13px; margin:10px 0; display:flex; align-items:center; gap:8px; }\n");
+        sb.append("</style>\n");
 
-        // Custom API Group
-        sb.append("  <div class=\"provider-group provider-custom\" style=\"display:").append("custom".equalsIgnoreCase(provider) ? "block" : "none").append(";\">");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">API Endpoint URL:</label>");
-        sb.append("      <input type=\"text\" name=\"apiEndpoint\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(apiEndpoint)).append("\" placeholder=\"https://api.example.com/v1/send\" />");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">HTTP Method:</label>");
-        sb.append("        <select name=\"httpMethod\" class=\"form-control form-control-sm\">");
-        sb.append("          <option value=\"POST\"").append("POST".equalsIgnoreCase(httpMethod) ? " selected" : "").append(">POST</option>");
-        sb.append("          <option value=\"GET\"").append("GET".equalsIgnoreCase(httpMethod) ? " selected" : "").append(">GET</option>");
-        sb.append("          <option value=\"PUT\"").append("PUT".equalsIgnoreCase(httpMethod) ? " selected" : "").append(">PUT</option>");
-        sb.append("          <option value=\"DELETE\"").append("DELETE".equalsIgnoreCase(httpMethod) ? " selected" : "").append(">DELETE</option>");
-        sb.append("        </select>");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Content-Type:</label>");
-        sb.append("        <input type=\"text\" name=\"contentType\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(contentType)).append("\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">From (Sender ID / Phone):</label>");
-        sb.append("        <input type=\"text\" name=\"from\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(from)).append("\" placeholder=\"Sender ID or From Number\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">To (Recipient Phone):</label>");
-        sb.append("        <input type=\"text\" name=\"to\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(to)).append("\" placeholder=\"Recipient Phone Number\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Message Content:</label>");
-        sb.append("      <textarea name=\"message\" class=\"form-control form-control-sm\" rows=\"2\" placeholder=\"Enter SMS / API message text...\">").append(escapeHtml(message)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Auth Header Name:</label>");
-        sb.append("        <input type=\"text\" name=\"authHeaderName\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(authHeaderName)).append("\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Auth Header Value:</label>");
-        sb.append("        <input type=\"text\" name=\"authHeaderValue\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(authHeaderValue)).append("\" placeholder=\"Bearer token or credentials\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Custom Headers (Header-Name: Value per line):</label>");
-        sb.append("      <textarea name=\"customHeaders\" class=\"form-control form-control-sm\" rows=\"2\" placeholder=\"X-Custom-Header: value\">").append(escapeHtml(customHeaders)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Custom Payload Template (Optional - auto-configured from To, From, Message if left blank):</label>");
-        sb.append("      <textarea name=\"payloadTemplate\" class=\"form-control form-control-sm\" rows=\"2\" placeholder='Auto-configured if blank. Custom example: {\"to\":\"{to}\",\"from\":\"{from}\",\"message\":\"{message}\"}'>").append(escapeHtml(payloadTemplate)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("  </div>");
+        sb.append("<div id=\"phone_verify_widget_").append(elementId).append("\" class=\"phone-verification-widget form-cell-element form-cell\">\n");
+        sb.append("  <label class=\"phone-label\" for=\"").append(elementId).append("\">").append(escapeHtml(label)).append("</label>\n");
 
-        // Twilio Group
-        sb.append("  <div class=\"provider-group provider-twilio\" style=\"display:").append("twilio".equalsIgnoreCase(provider) ? "block" : "none").append(";\">");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Account SID:</label>");
-        sb.append("        <input type=\"text\" name=\"twilioAccountSid\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(twilioAccountSid)).append("\" placeholder=\"ACxxxxxxxxxxxxxxxxxxxxxxxx\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Auth Token:</label>");
-        sb.append("        <input type=\"password\" name=\"twilioAuthToken\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(twilioAuthToken)).append("\" placeholder=\"Twilio Auth Token\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">To Phone Number:</label>");
-        sb.append("        <input type=\"text\" name=\"twilioTo\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(twilioTo)).append("\" placeholder=\"+1234567890\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">From Phone Number:</label>");
-        sb.append("        <input type=\"text\" name=\"twilioFrom\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(twilioFrom)).append("\" placeholder=\"+10987654321\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Message Body:</label>");
-        sb.append("      <textarea name=\"twilioBody\" class=\"form-control form-control-sm\" rows=\"3\" placeholder=\"Enter message text...\">").append(escapeHtml(twilioBody)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("  </div>");
+        sb.append("  <div class=\"input-group-custom\">\n");
+        sb.append("    <input type=\"tel\" id=\"").append(elementId).append("\" name=\"").append(elementId).append("\" class=\"form-control\" value=\"").append(escapeHtml(existingValue)).append("\" placeholder=\"").append(escapeHtml(placeholder)).append("\" ").append(isAlreadyVerified ? "readonly" : "").append(" />\n");
+        sb.append("    <button type=\"button\" id=\"").append(elementId).append("_send_btn\" class=\"").append(escapeHtml(buttonClass)).append("\" style=\"").append(isAlreadyVerified ? "display:none;" : "").append("\"><i class=\"fas fa-paper-plane mr-1\"></i> ").append(escapeHtml(sendOtpButtonLabel)).append("</button>\n");
+        sb.append("    <span id=\"").append(elementId).append("_badge\" class=\"verified-badge\" style=\"").append(isAlreadyVerified ? "" : "display:none;").append("\"><i class=\"fas fa-check-circle\"></i> Verified</span>\n");
+        sb.append("  </div>\n");
 
-        // Nexmo Group
-        sb.append("  <div class=\"provider-group provider-nexmo\" style=\"display:").append("nexmo".equalsIgnoreCase(provider) ? "block" : "none").append(";\">");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">API Key:</label>");
-        sb.append("        <input type=\"text\" name=\"nexmoApiKey\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(nexmoApiKey)).append("\" placeholder=\"Nexmo API Key\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">API Secret:</label>");
-        sb.append("        <input type=\"password\" name=\"nexmoApiSecret\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(nexmoApiSecret)).append("\" placeholder=\"Nexmo API Secret\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">To Phone Number:</label>");
-        sb.append("        <input type=\"text\" name=\"nexmoTo\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(nexmoTo)).append("\" placeholder=\"1234567890\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">From Sender ID / Number:</label>");
-        sb.append("        <input type=\"text\" name=\"nexmoFrom\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(nexmoFrom)).append("\" placeholder=\"MyBrand\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Message Text:</label>");
-        sb.append("      <textarea name=\"nexmoText\" class=\"form-control form-control-sm\" rows=\"3\" placeholder=\"Enter message text...\">").append(escapeHtml(nexmoText)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("  </div>");
+        sb.append("  <div id=\"").append(elementId).append("_lock_banner\" class=\"otp-locked-banner\" style=\"").append(isAlreadyVerified ? "display:none;" : "").append("\"><i class=\"fas fa-lock\"></i> <span>Form Locked: Please verify your phone number using OTP to unlock the rest of the form.</span></div>\n");
 
-        // Infobip Group
-        sb.append("  <div class=\"provider-group provider-infobip\" style=\"display:").append("infobip".equalsIgnoreCase(provider) ? "block" : "none").append(";\">");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Base URL:</label>");
-        sb.append("        <input type=\"text\" name=\"infobipBaseUrl\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(infobipBaseUrl)).append("\" placeholder=\"api.infobip.com\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">API Key:</label>");
-        sb.append("        <input type=\"password\" name=\"infobipApiKey\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(infobipApiKey)).append("\" placeholder=\"Infobip API Key\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">To Phone Number:</label>");
-        sb.append("        <input type=\"text\" name=\"infobipTo\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(infobipTo)).append("\" placeholder=\"41793026727\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">From Sender ID:</label>");
-        sb.append("        <input type=\"text\" name=\"infobipFrom\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(infobipFrom)).append("\" placeholder=\"InfoSMS\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Message Text:</label>");
-        sb.append("      <textarea name=\"infobipText\" class=\"form-control form-control-sm\" rows=\"3\" placeholder=\"Enter message text...\">").append(escapeHtml(infobipText)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("  </div>");
+        // OTP Section
+        sb.append("  <div id=\"").append(elementId).append("_otp_container\" style=\"display:none; margin-top:12px;\">\n");
+        sb.append("    <label style=\"font-size:13px; font-weight:600; color:#5a5c69; margin-bottom:4px; display:block;\">Enter 6-Digit OTP Code Sent to Your Phone:</label>\n");
+        sb.append("    <div class=\"input-group-custom\">\n");
+        sb.append("      <input type=\"text\" id=\"").append(elementId).append("_otp_input\" class=\"form-control\" placeholder=\"e.g. 123456\" maxlength=\"10\" autocomplete=\"off\" />\n");
+        sb.append("      <button type=\"button\" id=\"").append(elementId).append("_verify_btn\" class=\"btn btn-success\"><i class=\"fas fa-user-check mr-1\"></i> ").append(escapeHtml(verifyOtpButtonLabel)).append("</button>\n");
+        sb.append("      <button type=\"button\" id=\"").append(elementId).append("_resend_btn\" class=\"btn btn-outline-secondary\" style=\"margin-left:4px;\"><i class=\"fas fa-redo mr-1\"></i> Resend OTP</button>\n");
+        sb.append("    </div>\n");
+        sb.append("  </div>\n");
 
-        // Plivo Group
-        sb.append("  <div class=\"provider-group provider-plivo\" style=\"display:").append("plivo".equalsIgnoreCase(provider) ? "block" : "none").append(";\">");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Auth ID:</label>");
-        sb.append("        <input type=\"text\" name=\"plivoAuthId\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(plivoAuthId)).append("\" placeholder=\"Plivo Auth ID\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Auth Token:</label>");
-        sb.append("        <input type=\"password\" name=\"plivoAuthToken\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(plivoAuthToken)).append("\" placeholder=\"Plivo Auth Token\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">To Phone Number:</label>");
-        sb.append("        <input type=\"text\" name=\"plivoTo\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(plivoTo)).append("\" placeholder=\"14155552671\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">From Phone Number:</label>");
-        sb.append("        <input type=\"text\" name=\"plivoFrom\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(plivoFrom)).append("\" placeholder=\"14155552672\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Message Text:</label>");
-        sb.append("      <textarea name=\"plivoText\" class=\"form-control form-control-sm\" rows=\"3\" placeholder=\"Enter message text...\">").append(escapeHtml(plivoText)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("  </div>");
+        sb.append("  <div id=\"").append(elementId).append("_alert\" class=\"alert\" style=\"display:none;\"></div>\n");
+        sb.append("</div>\n");
 
-        // Brevo Group
-        sb.append("  <div class=\"provider-group provider-brevo\" style=\"display:").append("brevo".equalsIgnoreCase(provider) ? "block" : "none").append(";\">");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">API Key:</label>");
-        sb.append("      <input type=\"password\" name=\"brevoApiKey\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(brevoApiKey)).append("\" placeholder=\"xkeysib-...\" />");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Sender Name / ID:</label>");
-        sb.append("        <input type=\"text\" name=\"brevoSender\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(brevoSender)).append("\" placeholder=\"BrevoSMS\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Recipient Phone Number:</label>");
-        sb.append("        <input type=\"text\" name=\"brevoRecipient\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(brevoRecipient)).append("\" placeholder=\"+33600000000\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"form-group mb-2\">");
-        sb.append("      <label class=\"small font-weight-bold\">Message Content:</label>");
-        sb.append("      <textarea name=\"brevoContent\" class=\"form-control form-control-sm\" rows=\"3\" placeholder=\"Enter message content...\">").append(escapeHtml(brevoContent)).append("</textarea>");
-        sb.append("    </div>");
-        sb.append("  </div>");
-
-        // Msg91 Group
-        sb.append("  <div class=\"provider-group provider-msg91\" style=\"display:").append("msg91".equalsIgnoreCase(provider) ? "block" : "none").append(";\">");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Auth Key:</label>");
-        sb.append("        <input type=\"password\" name=\"msg91AuthKey\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(msg91AuthKey)).append("\" placeholder=\"Msg91 Auth Key\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Flow / Template ID:</label>");
-        sb.append("        <input type=\"text\" name=\"msg91FlowId\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(msg91FlowId)).append("\" placeholder=\"Flow ID\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("    <div class=\"row\">");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">Sender ID:</label>");
-        sb.append("        <input type=\"text\" name=\"msg91Sender\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(msg91Sender)).append("\" placeholder=\"MSGIND\" />");
-        sb.append("      </div>");
-        sb.append("      <div class=\"col-md-6 form-group mb-2\">");
-        sb.append("        <label class=\"small font-weight-bold\">To Mobile Number:</label>");
-        sb.append("        <input type=\"text\" name=\"msg91To\" class=\"form-control form-control-sm\" value=\"").append(escapeHtml(msg91To)).append("\" placeholder=\"919876543210\" />");
-        sb.append("      </div>");
-        sb.append("    </div>");
-        sb.append("  </div>");
-
-        // Action Button & Response Alert
-        sb.append("  <div class=\"mt-3\">");
-        sb.append("    <button type=\"button\" id=\"").append(elementId).append("_btn\" class=\"").append(buttonClass).append("\"><i class=\"fas fa-paper-plane mr-1\"></i> ").append(buttonLabel).append("</button>");
-        sb.append("    <div id=\"").append(elementId).append("_alert\" class=\"alert alert-dismissible fade show mt-3\" style=\"display:none; border-radius:6px; font-size:13px;\" role=\"alert\"></div>");
-        sb.append("  </div>");
-        sb.append("</div>");
-
-        // Client-side JavaScript
-        sb.append("<script type=\"text/javascript\">");
+        // Client JavaScript
+        sb.append("<script type=\"text/javascript\">\n");
         sb.append("$(document).ready(function(){\n");
-        sb.append("  var wrapper = $('#sms_widget_").append(elementId).append("');\n");
-        sb.append("  var providerSelect = wrapper.find('.sms-provider-select');\n");
-        sb.append("  providerSelect.on('change', function(){\n");
-        sb.append("    var selected = $(this).val();\n");
-        sb.append("    wrapper.find('.provider-group').hide();\n");
-        sb.append("    wrapper.find('.provider-' + selected).slideDown(200);\n");
+        sb.append("  var widget = $('#phone_verify_widget_").append(elementId).append("');\n");
+        sb.append("  var phoneInput = $('#").append(elementId).append("');\n");
+        sb.append("  var sendBtn = $('#").append(elementId).append("_send_btn');\n");
+        sb.append("  var verifyBtn = $('#").append(elementId).append("_verify_btn');\n");
+        sb.append("  var resendBtn = $('#").append(elementId).append("_resend_btn');\n");
+        sb.append("  var otpContainer = $('#").append(elementId).append("_otp_container');\n");
+        sb.append("  var otpInput = $('#").append(elementId).append("_otp_input');\n");
+        sb.append("  var alertBox = $('#").append(elementId).append("_alert');\n");
+        sb.append("  var lockBanner = $('#").append(elementId).append("_lock_banner');\n");
+        sb.append("  var verifiedBadge = $('#").append(elementId).append("_badge');\n");
+        sb.append("  var serviceUrl = '").append(url).append("';\n");
+        sb.append("  var isVerifiedState = ").append(isAlreadyVerified ? "true" : "false").append(";\n");
+
+        // Lock / Unlock helper functions
+        sb.append("  function isFormBuilderMode() {\n");
+        sb.append("    return ($('.form-builder-canvas, .form-builder, body.builder, #form-builder-canvas, .builder-palette').length > 0 || window.location.href.indexOf('/form/builder/') !== -1);\n");
+        sb.append("  }\n");
+
+        sb.append("  function lockRestOfForm() {\n");
+        sb.append("    if (isVerifiedState || isFormBuilderMode()) return;\n");
+        sb.append("    var parentForm = widget.closest('form');\n");
+        sb.append("    if (parentForm.length) {\n");
+        sb.append("      var otherCells = parentForm.find('.form-cell').filter(function(){\n");
+        sb.append("        return $(this).attr('id') !== widget.attr('id') && $(this).find(widget).length === 0;\n");
+        sb.append("      });\n");
+        sb.append("      otherCells.addClass('otp-locked-section');\n");
+        sb.append("      otherCells.find('input, select, textarea, button, a.btn').prop('disabled', true).addClass('otp-disabled-input');\n");
+        sb.append("      parentForm.find('.form-section, .form-column, .subform-container').filter(function(){\n");
+        sb.append("        return $(this).find(widget).length === 0;\n");
+        sb.append("      }).addClass('otp-locked-section');\n");
+        sb.append("    }\n");
+        sb.append("  }\n");
+
+        sb.append("  function unlockRestOfForm() {\n");
+        sb.append("    isVerifiedState = true;\n");
+        sb.append("    if (isFormBuilderMode()) return;\n");
+        sb.append("    var parentForm = widget.closest('form');\n");
+        sb.append("    if (parentForm.length) {\n");
+        sb.append("      parentForm.find('.otp-locked-section').removeClass('otp-locked-section');\n");
+        sb.append("      parentForm.find('.otp-disabled-input').prop('disabled', false).removeClass('otp-disabled-input');\n");
+        sb.append("    }\n");
+        sb.append("    lockBanner.slideUp();\n");
+        sb.append("  }\n");
+
+        // Initial lock application if not verified and not in Form Builder
+        sb.append("  if (!isFormBuilderMode()) {\n");
+        sb.append("    setTimeout(lockRestOfForm, 100);\n");
+        sb.append("  } else {\n");
+        sb.append("    lockBanner.hide();\n");
+        sb.append("  }\n");
+
+        // If phone input is changed after verification, reset verified state
+        sb.append("  phoneInput.on('input change', function(){\n");
+        sb.append("    if (isVerifiedState) {\n");
+        sb.append("      isVerifiedState = false;\n");
+        sb.append("      verifiedBadge.hide();\n");
+        sb.append("      sendBtn.show();\n");
+        sb.append("      phoneInput.prop('readonly', false);\n");
+        sb.append("      alertBox.hide();\n");
+        sb.append("      lockBanner.slideDown();\n");
+        sb.append("      lockRestOfForm();\n");
+        sb.append("    }\n");
         sb.append("  });\n");
-        sb.append("  wrapper.find('#").append(elementId).append("_btn').click(function(e){\n");
-        sb.append("    e.preventDefault();\n");
-        sb.append("    var btn = $(this);\n");
-        sb.append("    var alertBox = wrapper.find('#").append(elementId).append("_alert');\n");
-        sb.append("    var originalHtml = btn.html();\n");
+
+        // Send OTP action
+        sb.append("  function triggerSendOtp(btn) {\n");
+        sb.append("    var phoneVal = $.trim(phoneInput.val());\n");
+        sb.append("    if (!phoneVal) {\n");
+        sb.append("      alertBox.removeClass('alert-success').addClass('alert-danger').html('<strong>Error:</strong> Please enter a phone number first.').slideDown();\n");
+        sb.append("      return;\n");
+        sb.append("    }\n");
+        sb.append("    var origHtml = btn.html();\n");
         sb.append("    btn.html('<i class=\"fas fa-spinner fa-spin mr-1\"></i> Sending...').prop('disabled', true);\n");
         sb.append("    alertBox.hide().removeClass('alert-success alert-danger').text('');\n");
-        sb.append("    var postData = wrapper.closest('form').serialize();\n");
         sb.append("    $.ajax({\n");
-        sb.append("      url: '").append(url).append("',\n");
+        sb.append("      url: serviceUrl,\n");
         sb.append("      type: 'POST',\n");
-        sb.append("      data: postData,\n");
-        sb.append("      success: function(response){\n");
-        sb.append("        btn.html(originalHtml).prop('disabled', false);\n");
-        sb.append("        if (response && response.status >= 200 && response.status < 300) {\n");
-        sb.append("          alertBox.addClass('alert-success').html('<strong>Success (' + response.status + '):</strong> ' + (response.response || '").append(escapeJson(successMessage)).append("')).slideDown();\n");
+        sb.append("      data: { action: 'sendOtp', phoneNumber: phoneVal },\n");
+        sb.append("      success: function(resp){\n");
+        sb.append("        btn.html(origHtml).prop('disabled', false);\n");
+        sb.append("        if (resp && resp.success) {\n");
+        sb.append("          alertBox.addClass('alert-success').html('<strong>Success:</strong> ' + (resp.message || 'OTP sent successfully!')).slideDown();\n");
+        sb.append("          otpContainer.slideDown();\n");
+        sb.append("          otpInput.focus();\n");
         sb.append("        } else {\n");
-        sb.append("          var err = (response && response.response) ? response.response : '").append(escapeJson(errorMessage)).append("';\n");
-        sb.append("          alertBox.addClass('alert-danger').html('<strong>Error (' + (response ? response.status : 500) + '):</strong> ' + err).slideDown();\n");
+        sb.append("          var err = (resp && resp.message) ? resp.message : 'Failed to send OTP.';\n");
+        sb.append("          alertBox.addClass('alert-danger').html('<strong>Error:</strong> ' + err).slideDown();\n");
         sb.append("        }\n");
         sb.append("      },\n");
         sb.append("      error: function(xhr, status, error){\n");
-        sb.append("        btn.html(originalHtml).prop('disabled', false);\n");
-        sb.append("        var detail = (xhr.responseJSON && xhr.responseJSON.error) ? xhr.responseJSON.error : error;\n");
+        sb.append("        btn.html(origHtml).prop('disabled', false);\n");
+        sb.append("        var detail = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : error;\n");
+        sb.append("        alertBox.addClass('alert-danger').html('<strong>Request Failed:</strong> ' + detail).slideDown();\n");
+        sb.append("      }\n");
+        sb.append("    });\n");
+        sb.append("  }\n");
+
+        sb.append("  sendBtn.click(function(e){ e.preventDefault(); triggerSendOtp($(this)); });\n");
+        sb.append("  resendBtn.click(function(e){ e.preventDefault(); triggerSendOtp($(this)); });\n");
+
+        // Verify OTP action
+        sb.append("  verifyBtn.click(function(e){\n");
+        sb.append("    e.preventDefault();\n");
+        sb.append("    var phoneVal = $.trim(phoneInput.val());\n");
+        sb.append("    var otpVal = $.trim(otpInput.val());\n");
+        sb.append("    if (!otpVal) {\n");
+        sb.append("      alertBox.removeClass('alert-success').addClass('alert-danger').html('<strong>Error:</strong> Please enter the OTP code.').slideDown();\n");
+        sb.append("      return;\n");
+        sb.append("    }\n");
+        sb.append("    var origHtml = verifyBtn.html();\n");
+        sb.append("    verifyBtn.html('<i class=\"fas fa-spinner fa-spin mr-1\"></i> Verifying...').prop('disabled', true);\n");
+        sb.append("    alertBox.hide().removeClass('alert-success alert-danger').text('');\n");
+        sb.append("    $.ajax({\n");
+        sb.append("      url: serviceUrl,\n");
+        sb.append("      type: 'POST',\n");
+        sb.append("      data: { action: 'verifyOtp', phoneNumber: phoneVal, otpCode: otpVal },\n");
+        sb.append("      success: function(resp){\n");
+        sb.append("        verifyBtn.html(origHtml).prop('disabled', false);\n");
+        sb.append("        if (resp && resp.verified) {\n");
+        sb.append("          alertBox.addClass('alert-success').html('<strong>Verified:</strong> ' + (resp.message || '").append(escapeJson(successMessage)).append("')).slideDown();\n");
+        sb.append("          otpContainer.slideUp();\n");
+        sb.append("          sendBtn.hide();\n");
+        sb.append("          verifiedBadge.show();\n");
+        sb.append("          phoneInput.prop('readonly', true);\n");
+        sb.append("          unlockRestOfForm();\n");
+        sb.append("        } else {\n");
+        sb.append("          var err = (resp && resp.message) ? resp.message : '").append(escapeJson(errorMessage)).append("';\n");
+        sb.append("          alertBox.addClass('alert-danger').html('<strong>Verification Failed:</strong> ' + err).slideDown();\n");
+        sb.append("        }\n");
+        sb.append("      },\n");
+        sb.append("      error: function(xhr, status, error){\n");
+        sb.append("        verifyBtn.html(origHtml).prop('disabled', false);\n");
+        sb.append("        var detail = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : error;\n");
         sb.append("        alertBox.addClass('alert-danger').html('<strong>Request Failed:</strong> ' + detail).slideDown();\n");
         sb.append("      }\n");
         sb.append("    });\n");
         sb.append("  });\n");
+
+        // Prevent parent form submit if phone number entered but not verified
+        sb.append("  phoneInput.closest('form').on('submit', function(e){\n");
+        sb.append("    if (!isVerifiedState) {\n");
+        sb.append("      e.preventDefault();\n");
+        sb.append("      e.stopPropagation();\n");
+        sb.append("      alertBox.removeClass('alert-success').addClass('alert-danger').html('<strong>Verification Required:</strong> Please enter your phone number and complete OTP verification before submitting the form.').slideDown();\n");
+        sb.append("      $('html, body').animate({ scrollTop: widget.offset().top - 100 }, 300);\n");
+        sb.append("      return false;\n");
+        sb.append("    }\n");
+        sb.append("  });\n");
+
         sb.append("});\n");
-        sb.append("</script>");
+        sb.append("</script>\n");
 
         return sb.toString();
     }
 
     @Override
     public void webService(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        
         try {
-            Map<String, Object> mergedProperties = new java.util.HashMap<>();
-            
-            // Extract request parameters sent from front-end form controls
-            Map<String, String[]> paramMap = request.getParameterMap();
-            if (paramMap != null) {
-                for (Map.Entry<String, String[]> entry : paramMap.entrySet()) {
-                    if (entry.getValue() != null && entry.getValue().length > 0) {
-                        mergedProperties.put(entry.getKey(), entry.getValue()[0]);
-                    }
-                }
-            }
+            String action = request.getParameter("action");
+            if (action == null) action = "sendOtp";
+
+            String elementId = request.getParameter("elementId");
+            if (elementId == null) elementId = getPropertyString("id");
+
+            Map<String, Object> mergedProperties = new HashMap<>();
 
             String appId = request.getParameter("appId");
             String appVersion = request.getParameter("appVersion");
             String formDefId = request.getParameter("formDefId");
-            String elementId = request.getParameter("elementId");
 
             AppDefinition appDef = null;
             if (appId != null && !appId.isEmpty()) {
@@ -501,7 +403,6 @@ public class smsNotificationFormElement extends Element implements FormBuilderPa
                 appDef = AppUtil.getCurrentAppDefinition();
             }
 
-            // Merge element saved properties as fallbacks if available
             if (appDef != null && formDefId != null && elementId != null) {
                 try {
                     ApplicationContext ac = AppUtil.getApplicationContext();
@@ -514,45 +415,126 @@ public class smsNotificationFormElement extends Element implements FormBuilderPa
                         if (element != null && element.getProperties() != null) {
                             Map elemProps = element.getProperties();
                             for (Object k : elemProps.keySet()) {
-                                String keyStr = k.toString();
-                                if (!mergedProperties.containsKey(keyStr) || mergedProperties.get(keyStr) == null || mergedProperties.get(keyStr).toString().isEmpty()) {
-                                    mergedProperties.put(keyStr, elemProps.get(k));
-                                }
+                                mergedProperties.put(k.toString(), elemProps.get(k));
                             }
                         }
                     }
                 } catch (Exception ex) {
-                    LogUtil.warn(getClassName(), "Could not merge form element properties: " + ex.getMessage());
+                    LogUtil.warn(getClassName(), "Could not load saved form element properties: " + ex.getMessage());
                 }
             }
 
-            // Merge global plugin default properties from Configurable Plugins
             try {
                 mergedProperties = AppPluginUtil.getDefaultProperties(this, mergedProperties, appDef, null);
             } catch (Exception ex) {
                 LogUtil.warn(getClassName(), "Could not merge global plugin default properties: " + ex.getMessage());
             }
 
-            smsNotificationTool tool = new smsNotificationTool();
-            Map<String, Object> apiResult = tool.performApiCallAndAuditLog(mergedProperties, null, appDef);
+            if ("verifyOtp".equalsIgnoreCase(action)) {
+                String phoneNumber = request.getParameter("phoneNumber");
+                String otpCode = request.getParameter("otpCode");
 
-            response.setContentType("application/json");
-            int statusCode = 200;
-            if (apiResult != null && apiResult.get("status") != null) {
-                try {
-                    statusCode = Integer.parseInt(apiResult.get("status").toString());
-                } catch (Exception ignored) {}
+                if (phoneNumber == null || phoneNumber.trim().isEmpty() || otpCode == null || otpCode.trim().isEmpty()) {
+                    response.setStatus(400);
+                    response.getWriter().write("{\"status\":400, \"success\":false, \"verified\":false, \"message\":\"Phone number and OTP code are required.\"}");
+                    return;
+                }
+
+                HttpSession session = request.getSession(false);
+                String storedOtp = session != null ? (String) session.getAttribute("OTP_CODE_" + elementId) : null;
+                String storedPhone = session != null ? (String) session.getAttribute("OTP_PHONE_" + elementId) : null;
+                Long storedTime = session != null ? (Long) session.getAttribute("OTP_TIME_" + elementId) : null;
+
+                boolean verified = false;
+                if (storedOtp != null && storedPhone != null && storedTime != null) {
+                    long elapsed = System.currentTimeMillis() - storedTime;
+                    if (storedOtp.equals(otpCode.trim()) && storedPhone.equalsIgnoreCase(phoneNumber.trim()) && elapsed <= 10 * 60 * 1000) {
+                        verified = true;
+                    }
+                }
+
+                if (verified) {
+                    if (session == null) session = request.getSession(true);
+                    session.setAttribute("OTP_VERIFIED_" + elementId, Boolean.TRUE);
+                    session.setAttribute("OTP_VERIFIED_PHONE_" + elementId, phoneNumber.trim());
+
+                    String successMsg = (String) mergedProperties.get("successMessage");
+                    if (successMsg == null || successMsg.trim().isEmpty()) successMsg = "Phone number verified successfully!";
+                    response.setStatus(200);
+                    response.getWriter().write("{\"status\":200, \"success\":true, \"verified\":true, \"message\":\"" + escapeJson(successMsg) + "\"}");
+                } else {
+                    String errorMsg = (String) mergedProperties.get("errorMessage");
+                    if (errorMsg == null || errorMsg.trim().isEmpty()) errorMsg = "Invalid or expired OTP code. Please try again.";
+                    response.setStatus(400);
+                    response.getWriter().write("{\"status\":400, \"success\":false, \"verified\":false, \"message\":\"" + escapeJson(errorMsg) + "\"}");
+                }
+            } else {
+                // Action: sendOtp
+                String phoneNumber = request.getParameter("phoneNumber");
+                if (phoneNumber == null || phoneNumber.trim().isEmpty()) {
+                    response.setStatus(400);
+                    response.getWriter().write("{\"status\":400, \"success\":false, \"message\":\"Please enter a valid phone number.\"}");
+                    return;
+                }
+
+                int otpInt = 100000 + new SecureRandom().nextInt(900000);
+                String otpCode = String.valueOf(otpInt);
+
+                HttpSession session = request.getSession(true);
+                session.setAttribute("OTP_CODE_" + elementId, otpCode);
+                session.setAttribute("OTP_PHONE_" + elementId, phoneNumber.trim());
+                session.setAttribute("OTP_TIME_" + elementId, System.currentTimeMillis());
+                session.setAttribute("OTP_VERIFIED_" + elementId, Boolean.FALSE);
+
+                String template = (String) mergedProperties.get("otpMessageTemplate");
+                if (template == null || template.trim().isEmpty()) {
+                    template = "Your verification code is: {otp}";
+                }
+                String messageText = template.replace("{otp}", otpCode);
+
+                phoneNumber = phoneNumber.trim();
+                mergedProperties.put("to", phoneNumber);
+                mergedProperties.put("twilioTo", phoneNumber);
+                mergedProperties.put("nexmoTo", phoneNumber);
+                mergedProperties.put("infobipTo", phoneNumber);
+                mergedProperties.put("plivoTo", phoneNumber);
+                mergedProperties.put("brevoRecipient", phoneNumber);
+                mergedProperties.put("msg91To", phoneNumber);
+
+                mergedProperties.put("message", messageText);
+                mergedProperties.put("twilioBody", messageText);
+                mergedProperties.put("nexmoText", messageText);
+                mergedProperties.put("infobipText", messageText);
+                mergedProperties.put("plivoText", messageText);
+                mergedProperties.put("brevoContent", messageText);
+                mergedProperties.put("msg91Body", messageText);
+
+                smsNotificationTool tool = new smsNotificationTool();
+                Map<String, Object> apiResult = tool.performApiCallAndAuditLog(mergedProperties, null, appDef);
+
+                int statusCode = 200;
+                if (apiResult != null && apiResult.get("status") != null) {
+                    try {
+                        statusCode = Integer.parseInt(apiResult.get("status").toString());
+                    } catch (Exception ignored) {}
+                }
+
+                if (statusCode >= 200 && statusCode < 300) {
+                    response.setStatus(200);
+                    response.getWriter().write("{\"status\":200, \"success\":true, \"message\":\"OTP sent successfully to " + escapeJson(phoneNumber) + "\"}");
+                } else {
+                    String errStr = apiResult != null ? (String) apiResult.get("response") : "Failed to send OTP.";
+                    response.setStatus(statusCode >= 400 && statusCode < 600 ? statusCode : 500);
+                    response.getWriter().write("{\"status\":" + statusCode + ", \"success\":false, \"message\":\"Failed to send OTP: " + escapeJson(errStr) + "\"}");
+                }
             }
-            response.setStatus(statusCode >= 200 && statusCode < 600 ? statusCode : 200);
-            String responseStr = apiResult != null ? (String) apiResult.get("response") : "";
-            response.getWriter().write("{\"status\":" + statusCode + ", \"response\":\"" + escapeJson(responseStr) + "\"}");
         } catch (Exception e) {
-            LogUtil.error(getClassName(), e, "Error in SMS Form Element webservice");
+            LogUtil.error(getClassName(), e, "Error in Phone Number Verification Form Element webservice");
             response.setStatus(500);
-            response.getWriter().write("{\"status\":500, \"error\":\"Internal Server Error: " + escapeJson(e.getMessage()) + "\"}");
+            response.getWriter().write("{\"status\":500, \"success\":false, \"message\":\"Internal Server Error: " + escapeJson(e.getMessage()) + "\"}");
         }
     }
-    
+
     private String escapeJson(String input) {
         if (input == null) return "";
         return input.replace("\\", "\\\\")
